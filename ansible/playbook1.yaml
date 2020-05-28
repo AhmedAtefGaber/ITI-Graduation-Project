@@ -1,0 +1,30 @@
+- name: Loadbalancer Configuration
+  hosts: loadbalancer
+  tasks:
+   - name: installing nginx
+     yum:
+      name: nginx
+      state: latest
+     tags: nginx
+
+
+   - name: Allow all access from RFC1918 networks to this host
+     firewalld:
+      port: 443/tcp
+      permanent: yes
+      state: enabled
+      immediate: yes
+     tags: nginx
+
+   - name: configuring apache
+     template:
+      src: nginx.j2
+      dest: /etc/nginx/conf.d/load.conf
+     tags: nginx
+
+   - name: Touch a file, using symbolic modes to set the permissions (equivalent to 0644)
+     file:
+      path: /etc/default.conf
+      state: absent
+     tags: nginx
+

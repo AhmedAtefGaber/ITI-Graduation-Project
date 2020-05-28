@@ -1,0 +1,342 @@
+- name: wordpress 
+  hosts: apps
+  tasks:
+
+   - name: Adding repository of Glusterfs
+     apt_repository:
+      repo: 'ppa:gluster/glusterfs-7'
+      state: present
+      update_cache: true
+     tags:
+      - gluster
+
+
+   - name: install apache,php modules,libraries and updating apt
+     apt:
+      name: "{{item}}"
+      state: latest
+      update_cache: yes
+
+     loop:
+      - apache2
+      - unzip  
+      - php
+      - php-mysql
+      - libapache2-mod-php
+      - glusterfs-server
+     tags:
+      - wordpress
+      - gluster
+
+
+     
+   - name: Enable and start  service httpd and ufw 
+     service:
+      name: "{{item}}"
+      enabled: yes
+      state: started
+     loop:
+      - apache2
+      - ufw
+      - glusterd
+     tags:
+      - wordpressa
+      - gluster
+
+   - name: Allow all access from RFC1918 networks to this host
+     ufw:
+      rule: allow
+      state: enabled
+      port: "{{ item }}"
+     loop:
+      - 22
+      - 3306
+      - 80
+      - 443
+      - 24007
+     tags:
+      - wordpress
+      - gluster
+
+   - name: peering the nodes
+     command: gluster peer probe node2.app1.project.com
+     when: inventory_hostname == 'node1.app1.project.com'
+     tags:
+      - gluster
+
+   - name: peering the nodes
+     command: gluster peer probe node1.app1.project.com
+     when: inventory_hostname == 'node2.app1.project.com'
+     tags:
+      - gluster
+
+   - name: Glusterfs configurations
+     gluster_volume:
+      state: present
+      name: gv0
+      bricks: /mnt/gv0
+      replicas: 2
+      cluster:
+       - node1.app1.project.com
+       - node2.app1.project.com
+      force: true
+     run_once: true
+     tags:
+      - cluster1
+
+   - name: Mount and bind a volume
+     mount:
+      path: /var/www/html
+      src: "{{ inventory_hostname }}:/gv0"
+      opts: "defaults,_netdev"
+      state: mounted
+      fstype: glusterfs
+     tags:
+      - cluster1
+
+   
+
+   - name: Extract wordpress into /var/www/
+     unarchive:
+      src: https://wordpress.org/latest.zip
+      dest: /var/www/
+      remote_src: yes
+     tags:
+      - wordpress
+
+
+   - name: Create a directory if it does not exist
+     file:
+      path: /var/www/wordpress
+      state: directory
+      owner: www-data
+      group: www-data
+      mode: 0755
+      recurse: yes
+     tags:
+      - wordpress
+
+
+   - name: Renaming wp-config
+     command: mv /var/www/wordpress/wp-config-sample.php /var/www/wordpress/wp-config.php
+     tags:
+      - wordpress
+
+
+   - name: configuring wp-config.php
+     template:
+      src: temp.j2
+      dest: /var/www/wordpress/wp-config.php
+      owner: www-data
+      group: www-data
+      mode: 0755
+     tags:
+      - wordpress
+
+   - name: configuring apache
+     template:
+      src: apache.j2
+      dest: /etc/apache2/sites-available/domain.com.conf
+     tags:
+      - wordpress
+
+   - name: Enablsding the virtual host
+     command:  "{{item}}"
+     loop:
+     - a2ensite domain.com.conf
+     - a2dissite 000-default.conf
+     - systemctl restart apache2
+     tags:
+      - wordpress
+
+
+
+#==================================================================================================================
+
+- name: Loadbalancer Configuration
+  hosts: loadbalancer 
+  tasks:
+   - name: installing nginx
+     yum:
+      name: "{{item}}"
+      state: latest
+     loop:
+      - openssl
+      - python-pip  
+      - nginx
+   - name: Ensure python OpenSSL dependencies are installed.
+     pip:
+      name: pyOpenSSL
+      state: present
+   - name: create /etc/ssl/private directory
+     file:
+      path: /etc/ssl/private
+      state: directory
+   - name: 
+     file:
+      path: /etc/ssl/certs
+      state: directory
+
+   - name: Generate an OpenSSL private key.
+     openssl_privatekey:
+      path: /etc/ssl/private/ansible.com.pem
+
+   - name: Generate an OpenSSL Certificate Signing Request
+     openssl_csr:
+      path: /etc/ssl/certs/www.ansible.com.csr
+      privatekey_path: /etc/ssl/private/ansible.com.pem
+      common_name: www.ansible.com
+
+
+   
+   - name: Generate a Self Signed OpenSSL certificate
+     openssl_certificate:
+      path: /etc/ssl/certs/ansible.com.crt
+      privatekey_path:  /etc/ssl/private/ansible.com.pem
+      csr_path: /etc/ssl/certs/www.ansible.com.csr
+      provider: selfsigned
+
+
+
+   - name: Allow all access from RFC1918 networks to this host
+     firewalld:
+      port: 443/tcp
+      permanent: yes
+      state: enabled
+      immediate: yes
+
+
+   - name: configuring apache
+     template:
+      src: nginx.j2
+      dest: /etc/nginx/conf.d/load.conf
+
+   - name: Touch a file, using symbolic modes to set the permissions (equivalent to 0644)
+     file:
+      path:  /etc/nginx/conf.d/default.conf
+      state: absent 
+
+   - name: start nginx
+     service:
+      name: nginx
+      state: started
+      enabled: yes 
+
+#==============================================================================================
+
+
+- name: Mysql installation
+  hosts: db
+  tasks:
+  - name: Installing mariadb-server
+    apt:
+      pkg: mysql-server
+      update_cache: yes
+      cache_valid_time: 86400
+      state: present
+    tags:
+     - db
+
+  - name: Start MariaDB
+    service:
+      name: mysql
+      state: started
+      enabled: yes
+    tags:
+     - db
+
+
+  - name: Installing dependencies
+    apt:
+      pkg: [ 'python-mysqldb', 'php-mysql' ]
+      update_cache: yes
+      cache_valid_time: 86400
+      state: present
+    tags:
+     - db
+
+
+  - name: Ensure SELinux is set to enforcing mode
+    lineinfile:
+     path: /etc/mysql/mysql.conf.d/mysqld.cnf
+     regexp: '^bind-address'
+     line: bind-address            = 0.0.0.0
+    tags:
+     - db
+
+
+  - name: restart apache
+    service:
+      name: "{{item}}"
+      state: restarted
+    loop:
+      - mysql 
+      - ufw
+    tags:
+     - db
+
+  - name: Allow all access from RFC1918 networks to this host
+    ufw:
+     rule: allow
+     state: enabled
+     port: "{{ item }}"
+    loop:
+      - 22
+      - 3306
+      - 80
+      - 443
+    tags:
+     - db
+
+
+  - name: Create mysql database
+    mysql_db:
+      name: wordpress_db
+      state: present
+      login_unix_socket: /var/run/mysqld/mysqld.sock #path to Unix domain socket for local connection
+
+    tags:
+     - db
+
+  - name: Create mysql user
+    mysql_user:
+      name: wordpress_user
+      password: 12345678
+      priv: '*.*:ALL'
+      host: "{{item}}"
+    loop:
+     - localhost
+     - node1.app1.project.com
+     - node2.app1.project.com
+    tags:
+     - db
+#===============================================================================================================
+
+
+     
+
+
+
+
+          
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
+
