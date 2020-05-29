@@ -1,0 +1,95 @@
+- name: install nagios server
+  hosts: nagios
+  tasks:
+   - name: ensure a list of packages installed
+     yum:
+      name: epel-release
+      tags:
+       - nagios-server     
+   - name: install packages
+	 yum: 
+	  name: [ 'httpd' , 'gcc' , 'glibc' , 'glibc-common' , 'gd' ,\
+      'gd-devel' , 'make' , 'openssl-devel' , 'xinetd' , 'unzip' , 'perl' ]
+      enablerepo: epel
+	  state: present
+      tags:
+       - nagios-server      
+   - name: start and enable service
+     service:
+	  name: httpd
+	  state: started
+	  enabled: yes
+      tags:
+       - nagios-server      
+   - name: 
+	 User:
+	  name: nagios
+	  state: present
+	  shell: /bin/bash
+	  home: /home/nagios
+	  password: $1$2lDCWevR$SdX6VSEYKuEGXwO3JlIFe/
+      tags:
+       - nagios-server      
+   - name: add nagios to sudoers
+	 lineinfile:
+	  path: /etc/sudoers
+	  line: nagios ALL=(ALL) NOPASSWD: ALL
+      tags:
+       - nagios-server      
+   - name: Download needed packages
+	 get_url:
+	  url:
+	   - https://assets.nagios.com/downloads/nagioscore/releases/nagios-4.4.6.tar.gz
+	   - http://nagios-plugins.org/download/nagios-plugins-2.3.3.tar.gz
+	   - https://github.com/NagiosEnterprises/nrpe/releases/download/nrpe-4.0.2/nrpe-4.0.2.tar.gz
+	  dest: /home/nagios
+	  owner: nagios
+	  group: nagios
+      tags:
+       - nagios-server      
+   - name: Extract downloaded packages
+	 unarchive:
+	  src:
+	   - /home/nagios/nagios-4.4.6.tar.gz
+	   - /home/nagios/nagios-plugins-2.3.3.tar.gz
+	   - /home/nagios/nrpe-4.0.2.tar.gz
+	  dest: /home/nagios
+	  owner: nagios
+	  group: nagios
+      tags:
+       - nagios-server
+   - name: run configration command 
+	 command:
+	  - /home/nagios/nagios-4.4.6/configure --with-nagios-group=nagios \
+      --with-command-group=nagios
+	  - make all
+	  - sudo make install
+	  - sudo make install-commandmode
+	  - sudo make install-init
+	  - sudo make install-config
+	  - sudo make install-webconf
+	  - /home/nagios/nagios-plugins-2.3.3/configure --with-nagios-user=nagios \
+      --with-nagios-group=nagios --with-openssl
+	  - make
+	  - sudo make install
+	  - /home/nagios/nrpe-4.0.2/configure --enable-command-args --with-nagios-user=nagios \
+      --with-nagios-group=nagios --with-ssl=/usr/bin/openssl --with-ssl-lib=/usr/lib/x86_64-linux-gnu
+	  - make all
+	  - sudo make install
+	  - sudo make install-xinetd
+	  - sudo make install-inetd
+	  - sudo make install-daemon-config
+	 become_user: nagios
+      tags:
+       - nagios-server
+       
+- name: install nagios server
+  hosts:  all,!nagios
+  tasks:
+   - name: install packages
+	 yum: 
+	  name: [ 'nrpe' ,'nagios-plugins-all' , 'sysstat' , 'bc' ]
+     tags:
+       - nagios-client
+      
+      
