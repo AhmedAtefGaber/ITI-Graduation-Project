@@ -2,11 +2,11 @@
 node1.app1.project.com
 node2.app1.project.com
 
-[loadbalancer]
-localhost
+[lb]
+lb.project.com
 
 [db]
 db.project.com
 
-[main:children]
-apps
+[nagios]
+nagios.project.com
