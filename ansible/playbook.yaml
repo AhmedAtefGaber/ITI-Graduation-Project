@@ -332,97 +332,284 @@
     tags:
      - db
 #=============================== Nagios ==========================================
-- name: install nagios server
+- name: nagios server
   hosts: nagios
+  gather_facts: no
   tasks:
-   - name: ensure a list of packages installed
+   - name: Ensure group "somegroup" exists
+     group:
+      name: nagcmd
+      state: present
+
+   - name: Pre-configuration
+     user:
+      name: nagios
+      password: $1$2lDCWevR$SdX6VSEYKuEGXwO3JlIFe/
+      groups: nagcmd
+      append: yes
+
+
+   - name: add nagios to sudoers
+     lineinfile:
+      path: /etc/sudoers
+      line: "nagios ALL=(ALL) NOPASSWD: ALL"
+
+
+   - name: firewall configs
+     firewalld:
+      port: "{{item}}"
+      permanent: yes
+      state: enabled
+      immediate: yes
+     loop:
+      - 161/udp
+      - 162/udp
+      - 80/tcp
+      - 443/tcp
+      - 5666/tcp
+      - 22/tcp
+
+   - name: Disable SELinux
+     selinux:
+      state: disabled
+
+
+   - name: installing packages
      yum:
       name: epel-release
-      tags:
-       - nagios-server     
-   - name: install packages
-	 yum: 
-	  name: [ 'httpd' , 'gcc' , 'glibc' , 'glibc-common' , 'gd' ,\
-      'gd-devel' , 'make' , 'openssl-devel' , 'xinetd' , 'unzip' , 'perl' ]
-      enablerepo: epel
-	  state: present
-      tags:
-       - nagios-server      
-   - name: start and enable service
+      state: latest
+
+
+
+   - name: installing packages
+     yum:
+      name: "{{item}}"
+      enablerepo: "epel"
+      state: latest
+     loop:
+      - httpd
+      - mariadb-server
+      - mariadb
+      - php
+      - php-mysql
+      - gcc
+      - glibc
+      - glibc-common
+      - gd
+      - gd-devel
+      - make
+      - net-snmp
+      - openssl-devel
+      - xinetd
+      - unzip
+      - perl
+      - git
+      - mailx
+      - python-pip
+
+   - name: install python dependency
+     pip:
+      name: passlib
+
+
+
+   - name: Enable service httpd, and not touch the state
      service:
-	  name: httpd
-	  state: started
-	  enabled: yes
-      tags:
-       - nagios-server      
-   - name: 
-	 User:
-	  name: nagios
-	  state: present
-	  shell: /bin/bash
-	  home: /home/nagios
-	  password: $1$2lDCWevR$SdX6VSEYKuEGXwO3JlIFe/
-      tags:
-       - nagios-server      
-   - name: add nagios to sudoers
-	 lineinfile:
-	  path: /etc/sudoers
-	  line: nagios ALL=(ALL) NOPASSWD: ALL
-      tags:
-       - nagios-server      
-   - name: Download needed packages
-	 get_url:
-	  url:
-	   - https://assets.nagios.com/downloads/nagioscore/releases/nagios-4.4.6.tar.gz
-	   - http://nagios-plugins.org/download/nagios-plugins-2.3.3.tar.gz
-	   - https://github.com/NagiosEnterprises/nrpe/releases/download/nrpe-4.0.2/nrpe-4.0.2.tar.gz
-	  dest: /home/nagios
-	  owner: nagios
-	  group: nagios
-      tags:
-       - nagios-server      
-   - name: Extract downloaded packages
-	 unarchive:
-	  src:
-	   - /home/nagios/nagios-4.4.6.tar.gz
-	   - /home/nagios/nagios-plugins-2.3.3.tar.gz
-	   - /home/nagios/nrpe-4.0.2.tar.gz
-	  dest: /home/nagios
-	  owner: nagios
-	  group: nagios
-      tags:
-       - nagios-server
-   - name: run configration command 
-	 command:
-	  - /home/nagios/nagios-4.4.6/configure --with-nagios-group=nagios \
-      --with-command-group=nagios
-	  - make all
-	  - sudo make install
-	  - sudo make install-commandmode
-	  - sudo make install-init
-	  - sudo make install-config
-	  - sudo make install-webconf
-	  - /home/nagios/nagios-plugins-2.3.3/configure --with-nagios-user=nagios \
-      --with-nagios-group=nagios --with-openssl
-	  - make
-	  - sudo make install
-	  - /home/nagios/nrpe-4.0.2/configure --enable-command-args --with-nagios-user=nagios \
-      --with-nagios-group=nagios --with-ssl=/usr/bin/openssl --with-ssl-lib=/usr/lib/x86_64-linux-gnu
-	  - make all
-	  - sudo make install
-	  - sudo make install-xinetd
-	  - sudo make install-inetd
-	  - sudo make install-daemon-config
-	 become_user: nagios
-      tags:
-       - nagios-server
-       
-- name: install nagios server
-  hosts:  all,!nagios
+      name: "{{item}}"
+      state: started
+      enabled: yes
+     loop:
+      - httpd
+      - mariadb
+
+   - name: apache user configs
+     user:
+      name: apache
+      groups: nagcmd
+
+   - name: cloning the repo
+     git:
+      repo: 'https://github.com/Ahmed-Gebaly/iTi-SystemAdmin40.git'
+      dest: /home/nagios/iTi-SystemAdmin40
+      clone: yes
+      update: yes
+     become_user: nagios
+
+   - name: unarchiving
+     unarchive:
+      src: "{{item}}"
+      dest: /home/nagios/
+      remote_src: yes
+     loop:
+      - /home/nagios/iTi-SystemAdmin40/Final-Project/Nagios-Server-Packages/nagios-4.4.6.tar.gz
+      - /home/nagios/iTi-SystemAdmin40/Final-Project/Nagios-Server-Packages/nagios-plugins-2.3.3.tar.gz
+      - /home/nagios/iTi-SystemAdmin40/Final-Project/Nagios-Server-Packages/nrpe-4.0.2.tar.gz
+      - /home/nagios/iTi-SystemAdmin40/Final-Project/Nagios-Server-Config.tar.gz
+      - /home/nagios/iTi-SystemAdmin40/Final-Project/Nagios-host-plugins.tar.gz
+
+     become_user: nagios
+
+   - name: nagios
+     command: chown -R nagios:nagios /usr/local/nagios
+
+
+   - name: copying
+     copy:
+      src: /home/nagios/libexec/eventhandlers
+      dest: /usr/local/nagios/libexec
+      force: yes
+      remote_src: yes
+     become_user: nagios
+     tags: x
+
+   - name: copying
+     copy:
+      src: /home/nagios/etc
+      dest: /usr/local/nagios/
+      force: yes
+      remote_src: yes
+     become_user: nagios
+     tags: x
+
+
+   - name: compiling src code
+     command: "{{item}}"
+     args:
+      chdir: /home/nagios/nagios-4.4.6
+     loop:
+      - ./configure --with-nagios-group=nagios --with-command-group=nagcmd
+      - make all
+     become_user: nagios
+
+   - name: nagios
+     command: "{{item}}"
+     args:
+      chdir: /home/nagios/nagios-4.4.6
+     loop:
+      - make install
+      - make install-commandmode
+      - make install-init
+      - make install-config
+      - make install-webconf
+
+   - name: nagios plugins
+     command: "{{item}}"
+     args:
+      chdir: /home/nagios/nagios-plugins-2.3.3
+     loop:
+      - ./configure --with-nagios-user=nagios --with-nagios-group=nagios --with-openssl
+      - make
+     become_user: nagios
+
+   - name: nagios plugin making
+     command: make install
+     args:
+      chdir: /home/nagios/nagios-plugins-2.3.3
+   - name: nagios NRPE
+     command: "{{item}}"
+     args:
+      chdir: /home/nagios/nrpe-4.0.2
+     loop:
+      - ./configure --enable-command-args --with-nagios-user=nagios --with-nagios-group=nagios --with-ssl=/usr/bin/openssl --with-ssl-lib=/usr/lib/x86_64-linux-gnu
+      - make all
+     become_user: nagios
+
+   - name: nagios plugin making
+     command: "{{item}}"
+     args:
+      chdir: /home/nagios/nrpe-4.0.2
+     loop:
+      - make install
+      - make install-inetd
+
+   - name: Ensure SELinux is set to enforcing mode
+     lineinfile:
+      path: /etc/xinetd.d/nrpe
+      regexp: '^    only_from       = 127.0.0.1 '
+      line: "    only_from       = 127.0.0.1  {{inventory_hostname}}"
+
+
+   - name: restart xinted
+     service:
+      name: xinetd
+      state: restarted
+
+   - name: htpasswd
+     htpasswd:
+      path: /usr/local/nagios/etc/htpasswd.users
+      name: nagiosadmin
+      password: 123456
+
+
+   - name: nagios NRPE
+     command: "{{item}}"
+     loop:
+      - systemctl daemon-reload
+      - systemctl start nagios
+      - systemctl enable nagios
+      - systemctl restart httpd
+
+
+   - name: mail configuration
+     lineinfile:
+      path: /etc/mail.rc
+      line: "{{item}}"
+     loop:
+      - "smtp=smtps://smtp.gmail.com:465"
+      - "smtp-auth=login"
+      - "smtp-auth-user=iti.project.2020@gmail.com"
+      - "smtp-auth-password=@itisa40"
+      - "ssl-verify=ignore"
+      - "nss-config-dir=/etc/pki/nssdb/"
+
+#====================================================HOST-NAGIOS-======================================================================
+
+- name: nagios host playbook
+  hosts: centos
   tasks:
-   - name: install packages
-	 yum: 
-	  name: [ 'nrpe' ,'nagios-plugins-all' , 'sysstat' , 'bc' ]
-     tags:
-       - nagios-client
-      
+   - name: firewall configs
+     firewalld:
+      port: "{{item}}"
+      permanent: yes
+      state: enabled
+      immediate: yes
+     loop:
+      - 80/tcp
+      - 443/tcp
+      - 5666/tcp
+      - 22/tcp
+     tags: host
+
+   - name: installing packages
+     yum:
+      name: epel-release
+      state: latest
+     tags: host
+
+
+   - name: installing packages
+     yum:
+      name: "{{item}}"
+      enablerepo: "epel"
+      state: latest
+     loop:
+      - nrpe
+      - nagios-plugins-all
+      - sysstat
+      - bc
+      - git
+     tags: host
+   - name: cloning the repo
+     git:
+      repo: 'https://github.com/Ahmed-Gebaly/iTi-SystemAdmin40.git'
+      dest: /home/nagios/iTi-SystemAdmin40
+      clone: yes
+      update: yes
+     tags: host
+
+   - name: unarchiving
+     unarchive:
+      src: /home/nagios/iTi-SystemAdmin40/Final-Project/Nagios-host-plugins.tar.gz
+      dest: /usr/lib64/nagios/plugins/
+      remote_src: yes
+     tags: host
