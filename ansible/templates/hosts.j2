@@ -5,13 +5,3 @@
 10.128.0.6  nagios.project.com
 10.128.0.7  master.project.com
 
-
-gcloud compute instances create $INSTANCE_NAME \
-        --zone=us-central1-c \
-        --image-family=$IMAGE_FAMILY \
-        --image-project=deeplearning-platform-release \
-        --maintenance-policy=TERMINATE \
-        --accelerator="type=nvidia-tesla-v100,count=8" \
-        --machine-type=$INSTANCE_TYPE \
-        --boot-disk-size=120GB \
-        --metadata="install-nvidia-driver=True"

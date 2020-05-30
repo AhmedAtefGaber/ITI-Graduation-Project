@@ -1,3 +1,11 @@
+- name: setting hosts file on all servers 
+  hosts: all
+  tasks:
+   - name: setting hosts file
+     template:
+      src: host.j2
+      dest: /etc/hosts
+
 - name: wordpress 
   hosts: apps
   tasks:
