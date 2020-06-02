@@ -2,16 +2,16 @@
   hosts: all
   tasks:
 
-   - name: setting hosts file
-     template:
-      src: host.j2
-      dest: /etc/hosts
-     tags: all
-
    - name: setting hostnames of all servers
      hostname:
       name:   "{{ inventory_hostname }}"
-     tags: all
+     tags: all-servers
+
+   - name: setting hosts file
+     template:
+      src: hosts.j2
+      dest: /etc/hosts
+     tags: all-servers
 
 
 - name: wordpress 
@@ -152,15 +152,20 @@
    - name: configuring apache
      template:
       src: apache.j2
-      dest: /etc/apache2/sites-available/domain.com.conf
+      dest: /etc/apache2/sites-available/app1.com.conf
      tags:
       - wordpress
+
+
 
    - name: Enablsding the virtual host
      command:  "{{item}}"
      loop:
-     - a2ensite domain.com.conf
+     - a2ensite app1.com.conf
      - a2dissite 000-default.conf
+     - a2dissite domain.com.conf
+     - a2enmod ssl
+     - a2enmod headers
      - systemctl restart apache2
      tags:
       - wordpress
@@ -230,11 +235,24 @@
       - lb
 
    - name: Allow all access from RFC1918 networks to this host
-     firewalld:
-      port: 443/tcp
-      permanent: yes
-      state: enabled
-      immediate: yes
+     block: 
+     - firewalld:
+        port: 443/tcp
+        permanent: yes
+        state: enabled
+        immediate: yes
+     rescue: 
+     - service:
+        name: firewalld
+        state: started
+        enabled: yes
+     - firewalld:
+        port: 443/tcp
+        permanent: yes
+        state: enabled
+        immediate: yes
+
+  
      tags:
       - lb
 
@@ -245,6 +263,14 @@
       dest: /etc/nginx/conf.d/load.conf
      tags:
       - lb
+
+   - name: configuring apache
+     template:
+      src: nginx.default.j2
+      dest: /etc/nginx/nginx.conf
+     tags:
+      - lb
+
 
    - name: Touch a file, using symbolic modes to set the permissions (equivalent to 0644)
      file:
@@ -356,6 +382,8 @@
      group:
       name: nagcmd
       state: present
+     tags:
+      - nagios_server
 
    - name: Pre-configuration
      user:
@@ -582,6 +610,8 @@
 
 - name: nagios host playbook
   hosts: centos
+  tags:
+      - nagios_centos
   tasks:
    - name: firewall configs
      firewalld:
@@ -626,6 +656,95 @@
    - name: unarchiving
      unarchive:
       src: /home/nagios/iTi-SystemAdmin40/Final-Project/Nagios-host-plugins.tar.gz
-      dest: /usr/lib64/nagios/plugins/
+      dest: /home/nagios/iTi-SystemAdmin40/
       remote_src: yes
      tags: host
+#============================================== Nagios Ubuntu Host =====================================
+- name: nagios host playbook
+  hosts: ubuntu
+  tasks:
+   - name: install needed pacakges
+     apt:
+      name: "{{item}}"
+      state: latest
+      update_cache: yes
+
+     loop:
+      - nagios-plugins 
+      - nagios-nrpe-server 
+      - sysstat  
+      - bc 
+     tags:
+      - nagios_ubuntu
+     
+   - name: Allow ports
+     ufw:
+      rule: allow
+      state: enabled
+      port: 5666
+     tags:
+      - nagios_ubuntu
+   
+   - name: copy nagios plugins
+     copy:
+      src: /home/nagios/plugins/
+      dest: /usr/lib/nagios/plugins/
+      force: yes
+     become_user: nagios
+     tags: x
+   - name: cloning the repo
+     git:
+      repo: 'https://github.com/Ahmed-Gebaly/iTi-SystemAdmin40.git'
+      dest: /home/nagios/iTi-SystemAdmin40
+      clone: yes
+      update: yes
+     tags: nagios_ubuntu
+
+   - name: unarchiving
+     unarchive:
+      src: /home/nagios/iTi-SystemAdmin40/Final-Project/Nagios-host-plugins.tar.gz
+      dest:  /home/nagios/iTi-SystemAdmin40/
+      remote_src: yes
+     tags: nagios_ubuntu
+#========================================= Ansible Master ===================================================
+- name: nagios host playbook
+  hosts: ansible
+  tasks:
+   - name: Create Nagios User on Ansible Machine
+     user:
+      name: nagios
+      password: $1$2lDCWevR$SdX6VSEYKuEGXwO3JlIFe/
+      home: /home/nagios
+      shell: /bin/bash
+     tags:
+      - ansible_nagios
+
+   - name: add nagios to sudoers
+     lineinfile:
+      path: /etc/sudoers
+      line: "nagios ALL=(ALL) NOPASSWD: ALL"
+
+   - name: cloning the repo
+     git:
+      repo: 'https://github.com/Ahmed-Gebaly/iTi-SystemAdmin40.git'
+      dest: /home/nagios/iTi-SystemAdmin40
+      clone: yes
+      update: yes
+     become_user: nagios
+     tags:
+      - ansible_nagios
+
+   - name: unarchiving
+     unarchive:
+      src: "{{item}}"
+      dest: /home/nagios/
+     loop:
+      - /home/nagios/iTi-SystemAdmin40/Final-Project/Nagios-Server-Packages/nagios-4.4.6.tar.gz
+      - /home/nagios/iTi-SystemAdmin40/Final-Project/Nagios-Server-Packages/nagios-plugins-2.3.3.tar.gz
+      - /home/nagios/iTi-SystemAdmin40/Final-Project/Nagios-Server-Packages/nrpe-4.0.2.tar.gz
+      - /home/nagios/iTi-SystemAdmin40/Final-Project/Nagios-Server-Config.tar.gz
+      - /home/nagios/iTi-SystemAdmin40/Final-Project/Nagios-host-plugins.tar.gz
+     become_user: nagios
+     tags:
+      - ansible_nagios
+

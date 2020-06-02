@@ -8,5 +8,12 @@ lb.project.com
 [db]
 db.project.com
 
+[ubuntu:children]
+apps
+db
+
+[centos:children]
+lb
+
 [nagios]
 nagios.project.com

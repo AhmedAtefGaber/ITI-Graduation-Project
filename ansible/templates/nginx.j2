@@ -8,6 +8,11 @@ upstream backend {
                                 location / {
                                 proxy_pass http://backend;
 
+                                proxy_set_header Host $host;
+                                proxy_set_header X-Real-IP $remote_addr;
+                                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                                proxy_set_header X-Forwarded-Proto $scheme;
+
                                                    }
                                 ssl_certificate       /etc/ssl/certs/ansible.com.crt;
                                 ssl_certificate_key   /etc/ssl/private/ansible.com.pem;
@@ -16,9 +21,18 @@ upstream backend {
 
 
  server {
-                                listen 80 ;
-server_name  app1.project.com, 10.0.2.10;
+                               listen 80 ;
 return 301  https://$host$request_uri;
 
+ location / {
+                                proxy_pass http://backend/;
+
+                                proxy_set_header Host $host;
+                                proxy_set_header X-Real-IP $remote_addr;
+                                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                                proxy_set_header X-Forwarded-Proto $scheme;
+
+                                                   }
 
          }
+
