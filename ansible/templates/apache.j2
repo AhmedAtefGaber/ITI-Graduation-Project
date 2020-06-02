@@ -1,10 +1,11 @@
-<VirtualHost *:80>
 
-ServerAdmin admin@domain.com
-ServerName domain.com
-ServerAlias www.domain.com
-DocumentRoot /var/www/wordpress
-
+<VirtualHost *:443>
+    ServerName webserver1.com
+    DocumentRoot /var/www/html/
+    SSLEngine on
+    SSLCertificateFile  "{{ ssl_generated_certificate_path }}"
+    SSLCertificateKeyFile "{{ ssl_certificate_key_path }}"
+    DocumentRoot /var/www/wordpress
 <Directory /var/www/wordpress>
      Options Indexes FollowSymLinks
      AllowOverride All
@@ -14,3 +15,4 @@ DocumentRoot /var/www/wordpress
 ErrorLog ${APACHE_LOG_DIR}/domain.com_error.log
 CustomLog ${APACHE_LOG_DIR}/domain.com_access.log combined
 </VirtualHost>
+

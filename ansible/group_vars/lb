@@ -1,0 +1,4 @@
+ssl_certifcate_path: /etc/ssl/private/
+ssl_certificate_key_path: /etc/ssl/private/client.key
+ssl_generated_certificate_path: /etc/ssl/private/client.crt
+ssl_csr_path: /etc/ssl/private/ans_nginx.csr    

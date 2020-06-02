@@ -18,13 +18,20 @@
   hosts: apps
   tasks:
 
+   - name: install dependencies for glusterfs
+     apt:
+      name: [ 'software-properties-common' , 'glusterfs-common' ]
+      state: present
+      update_cache: yes
+     tags: wordpress
+
    - name: Adding repository of Glusterfs
      apt_repository:
       repo: 'ppa:gluster/glusterfs-7'
       state: present
-      update_cache: true
+      update_cache: yes
      tags:
-      - gluster
+      - wordpress
 
 
    - name: install apache,php modules,libraries and updating apt
@@ -42,7 +49,6 @@
       - glusterfs-server
      tags:
       - wordpress
-      - gluster
 
 
      
@@ -56,8 +62,7 @@
       - ufw
       - glusterd
      tags:
-      - wordpressa
-      - gluster
+      - wordpress
 
    - name: Allow all access from RFC1918 networks to this host
      ufw:
@@ -72,19 +77,18 @@
       - 24007
      tags:
       - wordpress
-      - gluster
 
    - name: peering the nodes
      command: gluster peer probe node2.app1.project.com
      when: inventory_hostname == 'node1.app1.project.com'
      tags:
-      - gluster
+      - wordpress
 
    - name: peering the nodes
      command: gluster peer probe node1.app1.project.com
      when: inventory_hostname == 'node2.app1.project.com'
      tags:
-      - gluster
+      - wordpress
 
    - name: Glusterfs configurations
      gluster_volume:
@@ -98,11 +102,11 @@
       force: true
      run_once: true
      tags:
-      - cluster1
+      - wordpress
 
    - name: Mount and bind a volume
      mount:
-      path: /var/www/html
+      path: /var/www/
       src: "{{ inventory_hostname }}:/gv0"
       opts: "defaults,_netdev"
       state: mounted
@@ -141,7 +145,7 @@
 
    - name: configuring wp-config.php
      template:
-      src: temp.j2
+      src: wp.j2
       dest: /var/www/wordpress/wp-config.php
       owner: www-data
       group: www-data
@@ -163,7 +167,6 @@
      loop:
      - a2ensite app1.com.conf
      - a2dissite 000-default.conf
-     - a2dissite domain.com.conf
      - a2enmod ssl
      - a2enmod headers
      - systemctl restart apache2
@@ -179,60 +182,10 @@
 
    - name: installing nginx
      yum:
-      name: "{{item}}"
+      name: nginx
       state: latest
-     loop:
-      - openssl
-      - python-pip  
-      - nginx
      tags:
       - lb		
-
-   - name: Ensure python OpenSSL dependencies are installed.
-     pip:
-      name: pyOpenSSL
-      state: present
-     tags:
-      - lb
-
-   - name: create /etc/ssl/private directory
-     file:
-      path: /etc/ssl/private
-      state: directory
-     tags:
-      - lb
-
-   - name: 
-     file:
-      path: /etc/ssl/certs
-      state: directory
-     tags:
-      - lb
-
-   - name: Generate an OpenSSL private key.
-     openssl_privatekey:
-      path: /etc/ssl/private/ansible.com.pem
-     tags:
-      - lb
-
-   - name: Generate an OpenSSL Certificate Signing Request
-     openssl_csr:
-      path: /etc/ssl/certs/www.ansible.com.csr
-      privatekey_path: /etc/ssl/private/ansible.com.pem
-      common_name: www.ansible.com
-     tags:
-      - lb
-
-
-   
-   - name: Generate a Self Signed OpenSSL certificate
-     openssl_certificate:
-      path: /etc/ssl/certs/ansible.com.crt
-      privatekey_path:  /etc/ssl/private/ansible.com.pem
-      csr_path: /etc/ssl/certs/www.ansible.com.csr
-      provider: selfsigned
-     tags:
-      - lb
 
    - name: Allow all access from RFC1918 networks to this host
      block: 
@@ -251,11 +204,8 @@
         permanent: yes
         state: enabled
         immediate: yes
-
-  
      tags:
       - lb
-
 
    - name: configuring apache
      template:
@@ -286,6 +236,58 @@
       enabled: yes 
      tags:
       - lb
+#============================== generating certificate======================
+- name: generate cert
+  hosts: lb,apps
+  tasks:
+   - name: installing openssl
+     yum:
+      name: "{{item}}"
+      state: latest
+     loop:
+      - openssl
+      - python-pip  
+     tags:
+      - cert    
+
+   - name: Ensure python OpenSSL dependencies are installed.
+     pip:
+      name: pyOpenSSL
+      state: present
+     tags:
+      - cert
+
+   - name: create {{ ssl_certifcate_path }} directory
+     file:
+      path: "{{ ssl_certifcate_path }}"
+      state: directory
+     tags:
+      - cert
+
+   - name: Generate an OpenSSL private key.
+     openssl_privatekey:
+      path: "{{ ssl_certificate_key_path  }}"
+      type: RSA
+      size: 2048
+      mode: '0444'
+     tags:
+      - cert
+
+   - name: Generate an OpenSSL CSR.
+     openssl_csr:
+       path: "{{ ssl_csr_path }}"
+       privatekey_path: "{{ ssl_certificate_key_path }}"
+     tags:
+      - cert
+
+   - name: Generate a Self Signed OpenSSL certificate.
+     openssl_certificate:
+       path: "{{ ssl_generated_certificate_path  }}"
+       privatekey_path: "{{ ssl_certificate_key_path  }}"
+       csr_path: "{{ ssl_csr_path }}"
+       provider: selfsigned
+     tags:
+      - cert
 
 #=============================== Database ==================================
 - name: Mysql installation

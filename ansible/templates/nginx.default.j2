@@ -17,7 +17,7 @@ events {
 http {
     log_format upstream_logging   '$remote_addr - $remote_user [$time_local] "$request" '
                                '$status $body_bytes_sent "$http_referer" '
-                               '"$http_user_agent" "$http_x_forwarded_for" "$upstream_cache_status" "$http_cache_control"'
+                               '"$http_user_agent" "$http_x_forwarded_for" "$proxy_add_x_forwarded_for" "$upstream_cache_status" "$http_cache_control""$scheme " "$request_method" "$host" "$request_uri" "$is_args" "$args" "$cookie_user"'
                                'rt=$request_time uct="$upstream_connect_time" uht="$upstream_header_time" urt="$upstream_response_time"';
 
     access_log  /var/log/nginx/access.log  upstream_logging;
@@ -36,6 +36,7 @@ http {
     # for more information.
  
     proxy_cache_path /var/lib/nginx/cache keys_zone=backcache:20m max_size=100m;
+    proxy_cache_key "$scheme$request_method$host$request_uri$is_args$args$cookie_user";
     include /etc/nginx/conf.d/*.conf;
    
 #    server {
@@ -90,5 +91,4 @@ http {
 #    }
 
 }
-
 
