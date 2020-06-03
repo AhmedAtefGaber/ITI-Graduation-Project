@@ -7,7 +7,7 @@
 
    - name: setting hostnames of all servers
      hostname:
-      name:   "{{ hostvars[host].host_name }}"
+      name:   "{{ host_name }}"
      tags: all-servers
 
    - name: setting hosts file
@@ -164,7 +164,7 @@
    - name: Mount and bind a volume
      mount:
       path: /var/www/
-      src: "{{ inventory_hostname }}:/gv0"
+      src: "{{ hostvars[host].host_name }}:/gv0"
       opts: "defaults,_netdev"
       state: mounted
       fstype: glusterfs
