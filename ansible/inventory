@@ -1,12 +1,13 @@
 [apps]
-node1.app1.project.com
-node2.app1.project.com
+node1	host_name=node1.app1.project.com
+node2	host_name=node2.app1.project.com
 
 [lb]
-lb.project.com
+loadbalancer       host_name=lb.project.com
+
 
 [db]
-db.project.com
+database       host_name=db.project.com
 
 [ubuntu:children]
 apps
@@ -16,4 +17,4 @@ db
 lb
 
 [nagios]
-nagios.project.com
+nagios-server        host_name=nagios.project.com

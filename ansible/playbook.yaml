@@ -1,11 +1,13 @@
-<<<<<<< HEAD
+- hosts: all
+  gather_facts: yes
+
 - name: setting hosts file on all servers
   hosts: all
   tasks:
 
    - name: setting hostnames of all servers
      hostname:
-      name:   "{{ inventory_hostname }}"
+      name:   "{{ hostvars[host].host_name }}"
      tags: all-servers
 
    - name: setting hosts file
@@ -14,35 +16,77 @@
       dest: /etc/hosts
      tags: all-servers
 
+#============================== generating certificate======================
+- name: generate cert
+  hosts: lb,apps
+  tasks:
+   - name: installing openssl
+     yum:
+      name: "{{item}}"
+      state: latest
+     loop:
+      - openssl
+      - python-pip  
+     tags:
+      - cert    
 
-=======
->>>>>>> parent of 14be49e... add set hosts file playbook
+   - name: Ensure python OpenSSL dependencies are installed.
+     pip:
+      name: pyOpenSSL
+      state: present
+     tags:
+      - cert
+
+   - name: create {{ ssl_certifcate_path }} directory
+     file:
+      path: "{{ ssl_certifcate_path }}"
+      state: directory
+     tags:
+      - cert
+
+   - name: Generate an OpenSSL private key.
+     openssl_privatekey:
+      path: "{{ ssl_certificate_key_path  }}"
+      type: RSA
+      size: 2048
+      mode: '0444'
+     tags:
+      - cert
+
+   - name: Generate an OpenSSL CSR.
+     openssl_csr:
+       path: "{{ ssl_csr_path }}"
+       privatekey_path: "{{ ssl_certificate_key_path }}"
+     tags:
+      - cert
+
+   - name: Generate a Self Signed OpenSSL certificate.
+     openssl_certificate:
+       path: "{{ ssl_generated_certificate_path  }}"
+       privatekey_path: "{{ ssl_certificate_key_path  }}"
+       csr_path: "{{ ssl_csr_path }}"
+       provider: selfsigned
+     tags:
+      - cert
+
+#=================================wordpress===================
 - name: wordpress 
   hosts: apps
   tasks:
-
-   - name: install dependencies for glusterfs
-     apt:
-      name: [ 'software-properties-common' , 'glusterfs-common' ]
-      state: present
-      update_cache: yes
-     tags: wordpress
 
    - name: Adding repository of Glusterfs
      apt_repository:
       repo: 'ppa:gluster/glusterfs-7'
       state: present
-      update_cache: yes
+      update_cache: true
      tags:
       - wordpress
-
 
    - name: install apache,php modules,libraries and updating apt
      apt:
       name: "{{item}}"
       state: latest
       update_cache: yes
-
      loop:
       - apache2
       - unzip  
@@ -52,8 +96,6 @@
       - glusterfs-server
      tags:
       - wordpress
-
-
      
    - name: Enable and start  service httpd and ufw 
      service:
@@ -76,20 +118,25 @@
       - 22
       - 3306
       - 80
+      - 111
       - 443
       - 24007
+      - 24008
+      - 24009
+      - 24010
+      - 49152 
+     tags:
+      - wordpress
+   
+   - name: peering the nodes
+     command: gluster peer probe node2
+     when: inventory_hostname == 'node1'
      tags:
       - wordpress
 
    - name: peering the nodes
-     command: gluster peer probe node2.app1.project.com
-     when: inventory_hostname == 'node1.app1.project.com'
-     tags:
-      - wordpress
-
-   - name: peering the nodes
-     command: gluster peer probe node1.app1.project.com
-     when: inventory_hostname == 'node2.app1.project.com'
+     command: gluster peer probe node1
+     when: inventory_hostname == 'node2'
      tags:
       - wordpress
 
@@ -100,10 +147,17 @@
       bricks: /mnt/gv0
       replicas: 2
       cluster:
-       - node1.app1.project.com
-       - node2.app1.project.com
+       - node1
+       - node2
       force: true
      run_once: true
+     tags:
+      - wordpress
+
+   - name: Enable and start  service httpd and ufw
+     service:
+      name: glusterd
+      state: restarted
      tags:
       - wordpress
 
@@ -115,20 +169,18 @@
       state: mounted
       fstype: glusterfs
      tags:
-      - cluster1
-
-   
-
-   - name: Extract wordpress into /var/www/
+      - wordpress
+  
+   - name: Extract wordpress into /var/www/ in one node only because of replication 
      unarchive:
       src: https://wordpress.org/latest.zip
       dest: /var/www/
       remote_src: yes
+     when: inventory_hostname == 'node1'
      tags:
       - wordpress
 
-
-   - name: Create a directory if it does not exist
+   - name: change directory's owner if it does not exist
      file:
       path: /var/www/wordpress
       state: directory
@@ -136,19 +188,20 @@
       group: www-data
       mode: 0755
       recurse: yes
+     when: inventory_hostname == 'node1'
      tags:
       - wordpress
 
 
    - name: Renaming wp-config
      command: mv /var/www/wordpress/wp-config-sample.php /var/www/wordpress/wp-config.php
+     when: inventory_hostname == 'node1'
      tags:
       - wordpress
 
-
    - name: configuring wp-config.php
      template:
-      src: wp.j2
+      src: temp.j2
       dest: /var/www/wordpress/wp-config.php
       owner: www-data
       group: www-data
@@ -175,8 +228,6 @@
      - systemctl restart apache2
      tags:
       - wordpress
-
-
 
 #================================ Loadbalacer ============================================
 - name: Loadbalancer Configuration
@@ -239,58 +290,7 @@
       enabled: yes 
      tags:
       - lb
-#============================== generating certificate======================
-- name: generate cert
-  hosts: lb,apps
-  tasks:
-   - name: installing openssl
-     yum:
-      name: "{{item}}"
-      state: latest
-     loop:
-      - openssl
-      - python-pip  
-     tags:
-      - cert    
 
-   - name: Ensure python OpenSSL dependencies are installed.
-     pip:
-      name: pyOpenSSL
-      state: present
-     tags:
-      - cert
-
-   - name: create {{ ssl_certifcate_path }} directory
-     file:
-      path: "{{ ssl_certifcate_path }}"
-      state: directory
-     tags:
-      - cert
-
-   - name: Generate an OpenSSL private key.
-     openssl_privatekey:
-      path: "{{ ssl_certificate_key_path  }}"
-      type: RSA
-      size: 2048
-      mode: '0444'
-     tags:
-      - cert
-
-   - name: Generate an OpenSSL CSR.
-     openssl_csr:
-       path: "{{ ssl_csr_path }}"
-       privatekey_path: "{{ ssl_certificate_key_path }}"
-     tags:
-      - cert
-
-   - name: Generate a Self Signed OpenSSL certificate.
-     openssl_certificate:
-       path: "{{ ssl_generated_certificate_path  }}"
-       privatekey_path: "{{ ssl_certificate_key_path  }}"
-       csr_path: "{{ ssl_csr_path }}"
-       provider: selfsigned
-     tags:
-      - cert
 
 #=============================== Database ==================================
 - name: Mysql installation
@@ -332,7 +332,6 @@
     tags:
      - db
 
-
   - name: restart apache
     service:
       name: "{{item}}"
@@ -340,6 +339,14 @@
     loop:
       - mysql 
       - ufw
+    tags:
+     - db
+
+  - name: change password for the root
+    mysql_user: 
+     user: root 
+     password: 12345678
+     host: localhost
     tags:
      - db
 
@@ -356,13 +363,11 @@
     tags:
      - db
 
-
   - name: Create mysql database
     mysql_db:
       name: wordpress_db
       state: present
       login_unix_socket: /var/run/mysqld/mysqld.sock #path to Unix domain socket for local connection
-
     tags:
      - db
 
@@ -378,6 +383,7 @@
      - node2.app1.project.com
     tags:
      - db
+
 #=============================== Nagios ==========================================
 - name: nagios server
   hosts: nagios
