@@ -201,11 +201,12 @@
 
    - name: configuring wp-config.php
      template:
-      src: temp.j2
+      src: wp.j2
       dest: /var/www/wordpress/wp-config.php
       owner: www-data
       group: www-data
       mode: 0755
+     when: inventory_hostname == 'node1'
      tags:
       - wordpress
 
@@ -215,8 +216,6 @@
       dest: /etc/apache2/sites-available/app1.com.conf
      tags:
       - wordpress
-
-
 
    - name: Enablsding the virtual host
      command:  "{{item}}"
@@ -345,7 +344,7 @@
   - name: change password for the root
     mysql_user: 
      user: root 
-     password: 12345678
+     password: "{{ root_password }}" 
      host: localhost
     tags:
      - db
@@ -374,7 +373,7 @@
   - name: Create mysql user
     mysql_user:
       name: wordpress_user
-      password: 12345678
+      password: "{{ wordpress_password }}"
       priv: '*.*:ALL'
       host: "{{item}}"
     loop:
