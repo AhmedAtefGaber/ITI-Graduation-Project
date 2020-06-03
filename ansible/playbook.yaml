@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 - name: setting hosts file on all servers
   hosts: all
   tasks:
@@ -14,6 +15,8 @@
      tags: all-servers
 
 
+=======
+>>>>>>> parent of 14be49e... add set hosts file playbook
 - name: wordpress 
   hosts: apps
   tasks:
