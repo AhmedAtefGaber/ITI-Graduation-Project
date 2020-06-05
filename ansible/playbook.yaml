@@ -1,6 +1,3 @@
-- hosts: all
-  gather_facts: yes
-
 - name: setting hosts file on all servers
   hosts: all
   tasks:
@@ -18,7 +15,7 @@
 
 #============================== generating certificate======================
 - name: generate cert
-  hosts: lb,apps
+  hosts:  lb,apps
   tasks:
    - name: installing openssl
      yum:
@@ -57,6 +54,7 @@
      openssl_csr:
        path: "{{ ssl_csr_path }}"
        privatekey_path: "{{ ssl_certificate_key_path }}"
+       common_name: iti.project.com
      tags:
       - cert
 
@@ -71,7 +69,7 @@
 
 #=================================wordpress===================
 - name: wordpress 
-  hosts: apps
+  hosts:  apps
   tasks:
 
    - name: Adding repository of Glusterfs
@@ -289,7 +287,80 @@
       enabled: yes 
      tags:
       - lb
+#================================= nginx-amplify =========================
+- name : install and configure nginx-amplify tool to monitor nginx status
+  hosts: lb
+  tasks: 
 
+    - name: download nginx public key
+      command: curl -sS -L -O http://nginx.org/keys/nginx_signing.key
+      tags: amplify
+
+    - name: add nginx public key
+      command: rpm --import nginx_signing.key   
+      tags: amplify
+
+    - name: adjust the release of the linux version
+      shell: "echo $release"
+      environment:
+        release: 7
+      tags: amplify
+   
+    - name: create the repository config file 
+      command: printf "[nginx-amplify]\nname=nginx amplify repo\nbaseurl=http://packages.amplify.nginx.com/centos/${release}/\$basearch\ngpgcheck=1\nenabled=1\n" > /etc/yum.repos.d/nginx-amplify.repo
+      tags: amplify
+ 
+    - name: add the repository config file
+      template:
+        src: nginx-amplify.j2
+        dest: /etc/yum.repos.d/nginx-amplify.repo
+        owner: root
+        group: root
+      tags: amplify
+ 
+    - name: Update the package metadata
+      command: yum makecache
+      tags: amplify
+
+    - name: Install and run the agent
+      yum:
+        name: nginx-amplify-agent
+        state: present
+      tags: amplify
+    
+    - name: adjust and configure the account's api key
+      shell: export api_key=910ad9b1fd419dcce8db305c6a135815
+      tags: amplify
+
+    - name: populate /etc/environment
+      lineinfile:
+       dest: "/etc/profile"
+       state: present
+       regexp: "^export  api_key="
+       line: export api_key={{api_key}}
+      notify: Source the bash_profile file
+
+    - name: create the Config File from a Template 
+      lineinfile:
+        dest: /etc/amplify-agent/agent.conf.default
+        regex: "^api_key"
+        state: present  
+        line: api_key={{ api_key }}
+      tags: amplify
+
+    - name: append the default config. file into the agent config. fle
+      shell: cat "/etc/amplify-agent/agent.conf.default" > "/etc/amplify-agent/agent.conf"
+      tags: amplify
+
+    - name: Start nginx-amplify agent
+      service:
+        name: amplify-agent
+        state: started
+      tags: amplify
+
+  handlers:
+    - name: Source the bash_profile file
+      shell: source /etc/profile
 
 #=============================== Database ==================================
 - name: Mysql installation
@@ -345,7 +416,8 @@
      user: root 
      password: "{{ root_password }}" 
      host: localhost
-    run_once: yes
+     login_user: root
+     login_password: "{{ root_password }}"
     tags:
      - db
 
