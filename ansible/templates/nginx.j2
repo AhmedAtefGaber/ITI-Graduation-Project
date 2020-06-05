@@ -1,6 +1,6 @@
     upstream backend {
         server node1.app1.project.com:443 max_fails=3 fail_timeout=15s;
-        server node1.app1.project.com:443 max_fails=3 fail_timeout=15s;
+        server node2.app1.project.com:443 max_fails=3 fail_timeout=15s;
     }
     
     server {

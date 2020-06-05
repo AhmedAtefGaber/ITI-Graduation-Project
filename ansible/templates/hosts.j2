@@ -1,3 +1,5 @@
-{% for item in groups['all'] %}
-{{ hostvars[item]['ansible_default_ipv4']['address']}} {{ hostvars[item]['host_name'] }}
-{% endfor %}
+10.128.0.10  lb.project.com
+10.128.0.11  node1.app1.project.com
+10.128.0.12  node2.app1.project.com
+10.128.0.13  db.project.com
+10.128.0.14  master.project.com

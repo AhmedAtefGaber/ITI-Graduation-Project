@@ -147,8 +147,8 @@
       bricks: /mnt/gv0
       replicas: 2
       cluster:
-       - node1
-       - node2
+       - node1.app1.project.com
+       - node2.app1.project.com
       force: true
      run_once: true
      tags:
