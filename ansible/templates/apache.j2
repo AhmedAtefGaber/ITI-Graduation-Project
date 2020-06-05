@@ -1,10 +1,9 @@
 <VirtualHost *:443>
     ServerName webserver1.com
-    DocumentRoot /var/www/html/
+    DocumentRoot /var/www/wordpress
     SSLEngine on
     SSLCertificateFile  "{{ ssl_generated_certificate_path }}"
     SSLCertificateKeyFile "{{ ssl_certificate_key_path }}"
-    DocumentRoot /var/www/wordpress
 <Directory /var/www/wordpress>
      Options Indexes FollowSymLinks
      AllowOverride All

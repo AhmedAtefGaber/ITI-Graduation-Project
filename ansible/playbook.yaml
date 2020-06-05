@@ -164,7 +164,7 @@
    - name: Mount and bind a volume
      mount:
       path: /var/www/
-      src: "{{ hostvars[host].host_name }}:/gv0"
+      src: "{{ host_name }}:/gv0"
       opts: "defaults,_netdev"
       state: mounted
       fstype: glusterfs
@@ -312,7 +312,6 @@
     tags:
      - db
 
-
   - name: Installing dependencies
     apt:
       pkg: [ 'python-mysqldb', 'php-mysql' ]
@@ -346,6 +345,7 @@
      user: root 
      password: "{{ root_password }}" 
      host: localhost
+    run_once: yes
     tags:
      - db
 
@@ -357,8 +357,6 @@
     loop:
       - 22
       - 3306
-      - 80
-      - 443
     tags:
      - db
 
@@ -367,6 +365,8 @@
       name: wordpress_db
       state: present
       login_unix_socket: /var/run/mysqld/mysqld.sock #path to Unix domain socket for local connection
+      login_user: root
+      login_password: "{{ root_password }}"
     tags:
      - db
 
@@ -374,6 +374,8 @@
     mysql_user:
       name: wordpress_user
       password: "{{ wordpress_password }}"
+      login_user: root
+      login_password: "{{ root_password }}"
       priv: '*.*:ALL'
       host: "{{item}}"
     loop:
