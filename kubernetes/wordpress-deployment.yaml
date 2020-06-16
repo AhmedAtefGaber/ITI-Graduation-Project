@@ -5,7 +5,7 @@ metadata:
  labels:
    app: wordpress
 spec:
- type: NodePort
+ type: LoadBalancer
  ports:
    - port: 80
      protocol: TCP
@@ -13,21 +13,6 @@ spec:
  selector:
    app: wordpress
    tier: frontend
-
-   #apiVersion: v1
-   #kind: Service
-   #metadata:
-   #name: wordpress
-   #spec:
-   #type: LoadBalancer
-   #loadBalancerIP: 23.236.57.146
-   #selector:
-   # app: wordpress
-   # tier: frontend
-   #ports:
-   #- protocol: TCP
-   # port: 80
-   # targetPort: 80
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -54,7 +39,7 @@ spec:
         name: wordpress
         env:
         - name:  WORDPRESS_DB_HOST
-          value: wordpress-mysql
+          value: mysql
         - name: WORDPRESS_DB_USER
           valueFrom:
             secretKeyRef:
@@ -74,11 +59,3 @@ spec:
             cpu: 500m
           requests:
             cpu: 200m          
-        volumeMounts:
-         - mountPath: /var/www/html
-           name: gv0
-      volumes:
-      - name: gv0
-        glusterfs:
-         endpoints: glusterfs-cluster
-         path: gv0
