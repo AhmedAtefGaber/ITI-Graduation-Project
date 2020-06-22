@@ -50,10 +50,10 @@ spec:
         container('kubectl') {
           // Change deployed image in canary to the one we just built
           sh("sed -i.bak 's#wordpress:5.4#${IMAGE_TAG}#' wordpress-deployment.yaml ")
-          step([$class: 'KubernetesEngineBuilder', namespace:'default', projectId: env.PROJECT, clusterName: env.CLUSTER, zone: env.CLUSTER_ZONE, manifestPattern: 'wordpress/wordpress-deployment-1.yaml', credentialsId: env.JENKINS_CRED, verifyDeployments: true])
-          step([$class: 'KubernetesEngineBuilder', namespace:'default', projectId: env.PROJECT, clusterName: env.CLUSTER, zone: env.CLUSTER_ZONE, manifestPattern: 'wordpress/wordpress-deployment-2.yaml', credentialsId: env.JENKINS_CRED, verifyDeployments: true])
-	  step([$class: 'KubernetesEngineBuilder', namespace:'default', projectId: env.PROJECT, clusterName: env.CLUSTER, zone: env.CLUSTER_ZONE, manifestPattern: 'mysql/mysql-deployment.yaml', credentialsId: env.JENKINS_CRED, verifyDeployments: true])
-          step([$class: 'KubernetesEngineBuilder', namespace:'default', projectId: env.PROJECT, clusterName: env.CLUSTER, zone: env.CLUSTER_ZONE, manifestPattern: 'services/svc.yaml', credentialsId: env.JENKINS_CRED, verifyDeployments: false])
+          step([$class: 'KubernetesEngineBuilder', namespace:'default', projectId: env.PROJECT, clusterName: env.CLUSTER, zone: env.CLUSTER_ZONE, manifestPattern: 'Jenkins/k8s/wordpress/wordpress-deployment-1.yaml', credentialsId: env.JENKINS_CRED, verifyDeployments: true])
+          step([$class: 'KubernetesEngineBuilder', namespace:'default', projectId: env.PROJECT, clusterName: env.CLUSTER, zone: env.CLUSTER_ZONE, manifestPattern: 'Jenkins/k8s/wordpress/wordpress-deployment-2.yaml', credentialsId: env.JENKINS_CRED, verifyDeployments: true])
+	  step([$class: 'KubernetesEngineBuilder', namespace:'default', projectId: env.PROJECT, clusterName: env.CLUSTER, zone: env.CLUSTER_ZONE, manifestPattern: 'Jenkins/k8s/mysql/mysql-deployment.yaml', credentialsId: env.JENKINS_CRED, verifyDeployments: true])
+          step([$class: 'KubernetesEngineBuilder', namespace:'default', projectId: env.PROJECT, clusterName: env.CLUSTER, zone: env.CLUSTER_ZONE, manifestPattern: 'Jenkins/k8s/services/svc.yaml', credentialsId: env.JENKINS_CRED, verifyDeployments: false])
           }
       }
     }  
