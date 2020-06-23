@@ -12,21 +12,21 @@ master:
   resources:
     requests:
       cpu: "50m"
-      memory: "512Mi"
-    limits:
-      cpu: "500"
       memory: "1024Mi"
+    limits:
+      cpu: "1"
+      memory: "3500Mi"
   javaOpts: "-Xms3500m -Xmx3500m"
   serviceType: ClusterIP
 agent:
   resources:
     requests:
-      cpu: "100m"
-      memory: "128Mi"
-    limits:
       cpu: "500m"
       memory: "256Mi"
+    limits:
+      cpu: "1"
+      memory: "512Mi"
 persistence:
-  size: 10Gi
+  size: 100Gi
 serviceAccount:
   name: cd-jenkins

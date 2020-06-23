@@ -15,16 +15,17 @@ spec:
     type: Recreate
   template:
     metadata:
+  
       labels:
         app: wordpress
         tier: frontend
     spec:
       containers:
-      - image: wordpress
+      - image: wordpress:5.4
         name: wordpress
         env:
         - name:  WORDPRESS_DB_HOST
-          value: mysql
+          value: wordpress-mysql
         - name: WORDPRESS_DB_USER
           valueFrom:
             secretKeyRef:
@@ -41,14 +42,8 @@ spec:
         - containerPort: 80
         resources:
           limits:
-            cpu: 500m
+            cpu: 100m
           requests:
-            cpu: 200m 
-        volumeMounts:
-        - name: wordpress
-          mountPath: /var/www/html
-      volumes:
-      - name: wordpress
-        persistentVolumeClaim:
-          claimName: wordpress
+            cpu: 100m 
+
          

@@ -15,30 +15,30 @@ spec:
     type: Recreate
   template:
     metadata:
+     
       labels:
         app: wordpress2
         tier: frontend
     spec:
       containers:
-      - image: wordpress
+      - image: wordpress:5.4
         name: wordpress
         env:
         - name:  WORDPRESS_DB_HOST
-          value: mysql
+          value: wordpress-mysql
         - name: WORDPRESS_DB_USER
-          value: user3
+          value: wpuser2
         - name: WORDPRESS_DB_PASSWORD
           valueFrom:
             secretKeyRef:
               name:  mysecret
               key: WORDPRESS_DB_PASSWORD
         - name: WORDPRESS_DB_NAME
-          value: wpdb3
+          value: wpdb2
         ports:
         - containerPort: 80
         resources:
           limits:
-            cpu: 500m
+            cpu: 100m
           requests:
-            cpu: 200m 
-         
+            cpu: 100m 
