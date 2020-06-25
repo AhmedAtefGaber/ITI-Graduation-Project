@@ -1,0 +1,24 @@
+sudo vim /etc/ssh/sshd_config
+port 65535
+sudo semanage port -a -t ssh_port_t -p tcp 65535
+sudo firewall-cmd  --add-rich-rule='rule family="ipv4"  port port="22" protocol="tcp" reject'
+sudo firewall-cmd  --add-rich-rule='rule family="ipv4"  port port="2200" protocol="tcp" reject'
+sudo firewall-cmd  --add-rich-rule='rule family="ipv4" source address="192.168.100.129" port port="65535" protocol="tcp" accept'
+sudo firewall-cmd  --add-rich-rule='rule family="ipv4" source address="192.168.100.130" port port="65535" protocol="tcp" accept'
+
+  firewall-cmd  --permanent --add-source=10.128.0.7/32 --zone=trusted
+  firewall-cmd --permanent --add-service=ssh --zone=trusted
+  firewall-cmd --reload
+  firewall-cmd --remove-service=ssh
+  firewall-cmd --remove-service=ssh  --permanent
+
+
+ ufw allow from 10.128.0.7 to any port 22 proto tcp
+
+
+
+
+
+
+
+

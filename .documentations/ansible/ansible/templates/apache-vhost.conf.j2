@@ -1,0 +1,18 @@
+<VirtualHost *:80>
+        ServerAdmin {{wp_admin_email}}
+        ServerName {{site_name}}
+        ServerAlias www.{{site_name}}
+
+        DocumentRoot {{wp_install_dir}}
+
+        <Directory {{wp_install_dir}} >
+                Options Indexes FollowSymLinks
+                AllowOverride All
+                Require all granted
+        </Directory>
+
+        ErrorLog /var/log/apache2/{{site_name}}-error.log
+        LogLevel warn
+        CustomLog /var/log/apache2/{{site_name}}-access.log combined
+
+</VirtualHost>

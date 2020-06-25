@@ -1,0 +1,103 @@
+# In Cloud Shell, type the following command to set the environment variable 
+# for the zone and cluster name
+
+export my_zone=us-central1-a
+export my_cluster=iti-k8s-cluster
+
+# to create a Kubernetes cluster iti-k8s-cluster
+gcloud container clusters create $my_cluster \
+    --num-nodes 3 --zone $my_zone --enable-ip-alias \
+    --machine-type "n1-standard-1" \
+    --image-type "UBUNTU" \
+    --disk-type "pd-ssd" \
+    --disk-size "100" \
+    --num-nodes "3" \
+    --enable-cloud-logging \
+    --enable-stackdriver-kubernetes\
+    --network "default" \
+    --addons HorizontalPodAutoscaling,HttpLoadBalancing,KubernetesDashboard
+
+# to enable bash autocompletion for kubectl
+source <(kubectl completion bash)
+
+# modify iti-k8s-cluster to have four nodes
+gcloud container clusters resize $my_cluster --zone $my_zone --num-nodes=4
+
+# To create a kubeconfig file with the credentials of the current user 
+# (to allow authentication) and provide the endpoint details for a specific cluster
+# (to allow communicating with that cluster through the kubectl command-line tool)
+gcloud container clusters get-credentials $my_cluster --zone $my_zone
+
+# Open the kubeconfig file
+cat ~/.kube/config
+
+# to print out the content of the kubeconfig file
+kubectl config view
+
+# to print out the cluster information for the active context
+kubectl cluster-info
+
+# to view the resource usage across the nodes of the cluster
+kubectl top nodes
+
+# to view the resources being used by the Pods
+kubectl top pods
+
+# to place the file into the appropriate location within the container in the Pod 
+kubectl cp ~/path/of/file/in/the/node $my_pod:/path/of/file/in/the/container
+
+# install lynx web browser
+apt-get update
+apt-get install -y lynx
+
+# Deploy NGINX Ingress Controller using the stable helm chart
+https://cloud.google.com/community/tutorials/nginx-ingress-gke
+
+# clone our k8s manifests
+git clone https://github.com/AhmedAtefGaber/ITI-Graduation-Project
+
+# how to run a replicated stateful application using a StatefulSet controller.
+# The example is a MySQL single-master topology with multiple slaves running asynchronous replication.
+https://kubernetes.io/docs/tasks/run-application/run-replicated-stateful-application/
+
+# create users and databases for wordpress
+kubectl run mysql-client --image=mysql:5.7 -i --rm --restart=Never --\
+  mysql -h wordpress-mysql-5b8669c7c4-fw4sq <<EOF
+CREATE DATABASE wpdb;
+CREATE DATABASE wpdb2;
+CREATE USER 'wpuser'@'%' IDENTIFIED BY '1234';
+GRANT ALL PRIVILEGES ON wpdb.* TO 'wpuser'@'%';
+CREATE USER 'wpuser2'@'%' IDENTIFIED BY '1234';
+GRANT ALL PRIVILEGES ON wpdb2.* TO 'wpuser2'@'%';
+FLUSH PRIVILEGES;
+EOF
+
+# HorizontalPodAutoscale 
+kubectl autoscale deployment wordpress --cpu-percent=20 --min=1 --max=10
+kubectl autoscale deployment wordpress2 --cpu-percent=20 --min=1 --max=10
+
+# to test hpa
+ab -n 1000 -c 100 http://
+while true; do wget -q -O- http:// ; done
+
+< /dev/urandom tr -dc [:alnum:] | head -c 32 ; echo ""
+
+
+161.35.203.241
+64.227.112.75
+134.209.234.100
+64.225.103.233
+64.227.112.88
+64.225.111.66
+64.225.103.56
+
+
+
+
+
+
+
+
+
+
+

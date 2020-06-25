@@ -1,0 +1,121 @@
+https://cloud.google.com/solutions/jenkins-on-kubernetes-engine-tutorial
+
+# In Cloud Shell, type the following command to set the environment variable 
+# for the zone and cluster name
+
+export my_zone=us-east1-d
+
+# Set the default Compute Engine zone to us-east1-d
+gcloud config set compute/zone $my_zone
+
+# to create a Kubernetes cluster jenkins-cd
+# The extra scopes enable Jenkins to access Cloud Source Repositories and Container Registry.
+gcloud container clusters create jenkins-cd \
+    --num-nodes 3 --zone $my_zone --enable-ip-alias \
+    --machine-type "n1-standard-1" \
+    --image-type "UBUNTU" \
+    --disk-type "pd-ssd" \
+    --disk-size "100" \
+    --num-nodes "3" \
+    --enable-cloud-logging \
+    --enable-stackdriver-kubernetes\
+    --network "default" \
+    --scopes "https://www.googleapis.com/auth/source.read_write,cloud-platform" \
+    --addons HorizontalPodAutoscaling,HttpLoadBalancing,KubernetesDashboard
+
+# to enable bash autocompletion for kubectl
+source <(kubectl completion bash)
+
+# Installing Helm
+# Use Helm to deploy Jenkins from the repository.
+
+# Download and install the Helm binary:
+wget https://get.helm.sh/helm-v3.2.1-linux-amd64.tar.gz
+tar zxfv helm-v3.2.1-linux-amd64.tar.gz
+cp linux-amd64/helm .
+
+# Add yourself as a cluster administrator in the cluster's RBAC so that you can give Jenkins permissions in the cluster:
+kubectl create clusterrolebinding cluster-admin-binding --clusterrole=cluster-admin \
+        --user=$(gcloud config get-value account)
+
+# Add the official stable repository:
+./helm repo add stable https://kubernetes-charts.storage.googleapis.com
+
+# Ensure Helm is properly installed by running the following command:
+./helm version
+
+# Installing Jenkins
+# Use the Helm CLI to deploy the chart with your configuration set:
+./helm install cd-jenkins -f ~/ITI-Graduation-Project/Jenkins/jenkins  stable/jenkins --version 1.7.3 --wait
+# It can take a few minutes for Jenkins to complete its initialization.
+
+# nsure the Jenkins pod goes to the Running state and the container is in the READY state:
+kubectl get pods
+
+# Set up port forwarding to the Jenkins UI from Cloud Shell:
+export POD_NAME=$(kubectl get pods --namespace default -l "app.kubernetes.io/component=jenkins-master" -l "app.kubernetes.io/instance=cd-jenkins" -o jsonpath="{.items[0].metadata.name}")
+kubectl port-forward $POD_NAME 8080:8080 >> /dev/null &
+
+# Check that the Jenkins Service was created properly.
+kubectl get svc
+
+# The Jenkins installation is using the Kubernetes Plugin to create builder agents.
+# They will be automatically launched as necessary when the Jenkins master needs to run a build.
+# When their work is done, they are automatically terminated and their resources are added back to the cluster's resource pool.
+
+# Connecting to Jenkins
+# Retrieve the admin password that was automatically created by the Jenkins Helm chart:
+printf $(kubectl get secret cd-jenkins -o jsonpath="{.data.jenkins-admin-password}" | base64 --decode);echo
+
+# To open the Jenkins user interface, click Web Preview in Cloud Shell and click Preview on port 8080.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

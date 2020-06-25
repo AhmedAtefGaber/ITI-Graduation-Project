@@ -1,0 +1,115 @@
+---
+- name : install wordpress on ubuntu
+  hosts: app
+  tasks:
+  - name : Install required php pakages 
+    apt:
+      pkg: ['php-pear', 'php-fpm', 'php-dev', 'php-zip', 'php-curl',
+            'php-xmlrpc', 'php-gd', 'php-mysql', 'php-mbstring', 'php-xml',
+	    'apache2', 'unzip', 'libapache2-mod-php']
+      update_cache: yes
+      cache_valid_time: 86400
+      state: present
+  - name: Remove /var/www/html/index.html
+    file:
+      path: /var/www/html/index.html
+      state: absent
+
+  - name: Create directory
+    file:
+      path: "/var/www/html/"
+      state: directory
+      mode: 0755
+
+  - name:  Extract archive
+    unarchive:
+      src: "https://wordpress.org/latest.zip"
+      dest: "/var/www/html/"
+      remote_src: yes #archived file is on remote system and not local.
+
+  - name: Wordpress | Move files from /var/www/html/wordpress to /var/www/html
+    command: cp -rf . "/var/www/html"
+    args:
+      chdir: "/var/www/html/wordpress/" #Change into this directory before running the command
+
+  - name: Wordpress | Remove wordpress dir
+    file:
+      path: "/var/www/html/wordpress/"
+      state: absent
+
+  - name: Wordpress | Copy wp-config.php file
+    template:
+      src: wp-config.php.j2
+      dest: "/var/www/html/wp-config.php"
+
+  - name: Wordpress | Change ownership of installation directory
+    file:
+      path: "/var/www/html"
+      owner: www-data
+      group: www-data
+      mode: 755	
+      state: directory
+      recurse: yes #Recursively 
+
+  - name: Wordpress | Apache | Copy virtual host configuration file
+    template:
+      src: apache-vhost.conf.j2
+      dest: "/etc/apache2/sites-available/{{ site_name }}.conf"
+      owner: root
+      group: root
+      mode: 0644
+
+  - name: WordPress | Apache | Enable site
+    command: "sudo a2ensite {{ site_name }}.conf"
+  
+  - name:  disable default site
+    command: "sudo a2dissite 000-default.conf"
+
+
+  - name: Installing mariadb-server
+    apt:
+      pkg: mariadb-server
+      update_cache: yes
+      cache_valid_time: 86400
+      state: present
+
+  - name: Start MariaDB
+    service:
+      name: mysql
+      state: started
+      enabled: yes 	
+
+  - name: Installing dependencies
+    apt:
+      pkg: [ 'python-mysqldb', 'php-mysql' ]
+      update_cache: yes
+      cache_valid_time: 86400
+      state: present
+
+  - name: restart apache
+    service:
+      name: apache2
+      state: restarted
+
+  - name: Install pymysql
+    apt:
+      pkg: python3-pymysql
+      cache_valid_time: 86400
+      state: present
+
+  - name: Create mysql database
+    mysql_db:
+      name: "{{ wp_db_name }}"
+      state: present
+      login_unix_socket: /var/run/mysqld/mysqld.sock #path to Unix domain socket for local connection
+
+  - name: Create mysql user
+    mysql_user:
+      name: "{{ wp_db_user }}"
+      password: "{{ wp_db_password }}"
+      priv: '*.*:ALL'
+      login_unix_socket: /var/run/mysqld/mysqld.sock
+
+
+
+

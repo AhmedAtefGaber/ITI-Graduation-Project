@@ -1,0 +1,47 @@
+
+useradd -md /home/ansible -s /bin/bash ansible
+
+echo 'ansible        ALL=(ALL)       NOPASSWD: ALL' >> /etc/sudoers
+ssh-keygen
+cp ~/.ssh/id_rsa.pub ~/.ssh/authorized_keys
+scp -r ~/.ssh node2:
+scp -r ~/.ssh node1:
+yum -y install ansible
+sudo apt install python -y
+
+cat ansible.cfg
+
+[defaults]
+inventory = /home/ansible/inv
+ask_pass = FALSE
+[privilege_escalation]
+become=True
+become_method=sudo
+become_user=root
+
+cat ~/inv
+[app]
+node1.app1.project.com
+node2.app1.project.com
+
+
+[lb]
+lb.project.com
+
+mkdir group_vars
+cat  group_vars/app
+---
+wp_db_name: "{{ wp_mysql_db }}"
+wp_db_user: "{{ wp_mysql_user }}"
+wp_db_password: "{{ wp_mysql_password }}"
+wp_db_host: 'localhost'
+wp_db_charset: 'utf8'
+wp_db_collate: ''
+wp_table_prefix: 'wp_'
+wp_debug: false
+wp_admin_email: 'ahmedatef844.218@example.com'
+site_name: "app1.project.com"
+
+
+
+

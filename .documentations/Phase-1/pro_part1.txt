@@ -1,0 +1,112 @@
+---------------------------------------------------------------------------
+Configuring wordpress on ubuntu 18.04 with a remote database
+---------------------------------------------------------------------------
+-Update the repo
+
+apt update && apt upgrade
+
+-Install Apache Web Server
+
+apt -y install apache2
+systemctl status apache2
+systemctl enable apache2
+
+-Install PHP
+
+apt -y install php php-xml php-common php-gd php-mbstring php-xmlrpc php-curl php-soap php-zip php-intl
+apt -y install php-mysql
+- Install MySQL on the Remote Server
+
+apt -y install mysql-server
+
+-To accept remote connections, edit the MySQL configuration file and modify the bind-address option.
+
+vim /etc/mysql/mysql.conf.d/mysqld.cnf
+bind-address            = 0.0.0.0
+
+systemctl restart mysql
+
+-Create MySQL Database and User
+
+mysql -u root -p
+
+mysql> CREATE DATABASE wpdb2;
+mysql> CREATE USER 'wpuser2'@'%' IDENTIFIED BY '1234';
+mysql> GRANT ALL PRIVILEGES ON wpdb2.* TO 'wpuser2'@'%';
+mysql> FLUSH PRIVILEGES;
+
+-Install WordPress
+
+wget https://wordpress.org/latest.zip
+sudo apt install unzip
+unzip latest.zip -d /var/www/html
+chown -R www-data:www-data /var/www/html/wordpress
+mv /var/www/html/wordpress/wp-config-sample.php /var/www/html/wordpress/wp-config.php
+
+vim /var/www/html/wordpress/wp-config.php
+
+/** The name of the database for WordPress */
+define( 'DB_NAME', 'wordpress_db' );
+
+/** MySQL database username */
+define( 'DB_USER', 'wordpress_user' );
+
+/** MySQL database password */
+define( 'DB_PASSWORD', 'marwan' );
+
+/** MySQL hostname */
+define( 'DB_HOST', '172.16.128.85' );
+
+/** Database Charset to use in creating database tables. */
+define( 'DB_CHARSET', 'utf8' );
+
+/** The Database Collate type. Don't change this if in doubt. */
+define( 'DB_COLLATE', '' );
+
+/**#@+
+
+-Create an Apache Virtual Host
+
+Step 1 — Create the Directory Structure
+udo mkdir -p /var/www/test.com/public_html
+
+Step 2 — Grant Permissions
+
+sudo chown -R $USER:$USER /var/www/test.com/public_html
+sudo chmod -R 755 /var/www
+
+Step 3 — Create Demo Pages for Each Virtual Host
+vim /var/www/test.com/public_html/index.html
+
+Step 4 — Create New Virtual Host Files
+
+sudo cp /etc/apache2/sites-available/000-default.conf /etc/apache2/sites-available/test.com.conf
+
+vim /etc/apache2/sites-available/test.com.conf
+
+<VirtualHost *:80>
+
+ServerAdmin admin@domain.com
+ServerName domain.com
+ServerAlias www.domain.com
+DocumentRoot /var/www/html/wordpress
+
+<Directory /var/www/html/wordpress>
+     Options Indexes FollowSymLinks
+     AllowOverride All
+     Require all granted
+</Directory>
+
+ErrorLog ${APACHE_LOG_DIR}/domain.com_error.log 
+CustomLog ${APACHE_LOG_DIR}/domain.com_access.log combined 
+</VirtualHost>
+
+
+Step 5 — Enable the New Virtual Host Files
+
+a2ensite test.com.conf
+a2dissite 000-default.conf
+systemctl restart apache2
+
+Step 6 — Set Up Local Hosts File
+

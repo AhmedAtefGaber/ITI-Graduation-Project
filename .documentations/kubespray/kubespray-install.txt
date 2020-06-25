@@ -1,0 +1,70 @@
+ssh -i "D:\ITI_SYSTEM ADMIN\Project\keys\atef.ppk" atef@161.35.203.241
+ssh -i "D:\ITI_SYSTEM ADMIN\Project\keys\atef.ppk" atef@64.227.112.75
+ssh -i "D:\ITI_SYSTEM ADMIN\Project\keys\atef.ppk" atef@134.209.234.100
+ssh -i "D:\ITI_SYSTEM ADMIN\Project\keys\atef.ppk" atef@64.225.103.233
+ssh -i "D:\ITI_SYSTEM ADMIN\Project\keys\atef.ppk" atef@64.227.112.88
+ssh -i "D:\ITI_SYSTEM ADMIN\Project\keys\atef.ppk" atef@64.225.111.66
+ssh -i "D:\ITI_SYSTEM ADMIN\Project\keys\atef.ppk" atef@64.225.103.56
+
+vi /etc/hosts
+161.35.203.241  node1
+64.227.112.75   node2
+134.209.234.100 node3
+64.225.103.233  node4
+64.227.112.88   node5
+64.225.111.66   node6
+64.225.103.56   master
+
+https://www.youtube.com/watch?v=IluhOk86prA
+https://dzone.com/articles/kubespray-10-simple-steps-for-installing-a-product
+
+# on the jumpbox
+# Enable passwordless login between all servers
+apt update
+apt install ansible -y
+apt install python3.6 -y
+apt install python3-pip  -y
+pip3 install --upgrade pip
+pip --version
+pip3 install jinja2 --upgrade
+useradd -md /home/k8s -s /bin/bash k8s
+passwd k8s
+echo 'k8s        ALL=(ALL)       NOPASSWD: ALL' >> /etc/sudoers
+su - k8s
+ssh-keygen
+git clone https://github.com/kubernetes-incubator/kubespray.git
+cd kubespray
+sudo pip install -r requirements.txt
+cp -rfp inventory/sample inventory/iti-cluster
+
+# Update the Ansible inventory file with inventory builder
+declare -a IPS=(161.35.203.241 64.227.112.75 134.209.234.100 64.225.103.233 64.227.112.88 64.225.111.66)
+CONFIG_FILE=inventory/iti-cluster/hosts.yml python3.6 contrib/inventory_builder/inventory.py ${IPS[@]}
+
+vi inventory/iti-cluster/group_vars/all/all.yml
+# uncomment kube_read_only_port: 10255
+# to enable metrics to fetch the cluster resource utilization data without this HPAs will not work 
+# (for ‘kubectl top nodes’ & ‘kubectl top pods’ commands to work)
+ansible-playbook -i inventory/iti-cluster/hosts.yml --become --become-user=root cluster.yml
+
+# install kubectl
+cd
+curl -LO https://storage.googleapis.com/kubernetes-release/release/`curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt`/bin/linux/amd64/kubectl
+chmod +x ./kubectl
+sudo mv ./kubectl /usr/local/bin/kubectl
+source <(kubectl completion bash)
+kubectl get nodes
+mkdir -p $HOME/.kube
+scp node1:config ./.kube/
+
+
+
+
+
+
+
+
+
+
+
+

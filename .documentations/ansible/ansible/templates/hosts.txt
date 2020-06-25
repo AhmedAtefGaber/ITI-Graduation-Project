@@ -1,0 +1,2 @@
+{% for host in groups['all']  %}
+{{ ansible_facts['default_ipv4'']['address'] }}   {{ inventory_hostname }}

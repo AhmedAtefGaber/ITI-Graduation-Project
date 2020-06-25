@@ -43,11 +43,9 @@ spec:
   }
   stages {
     stage('Deploy wp') {
-      // Canary branch
       
       steps {
         container('kubectl') {
-          // Change deployed image in canary to the one we just built
           sh("sed -i.bak 's#wordpress:5.4#${IMAGE_TAG}#' Jenkins/k8s/wordpress/wordpress-deployment-1.yaml")
           sh("sed -i.bak 's#wordpress:5.4#${IMAGE_TAG}#' Jenkins/k8s/wordpress/wordpress-deployment-2.yaml")
           step([$class: 'KubernetesEngineBuilder', namespace:'default', projectId: env.PROJECT, clusterName: env.CLUSTER, zone: env.CLUSTER_ZONE, manifestPattern: 'Jenkins/k8s/wordpress/wordpress-deployment-1.yaml', credentialsId: env.JENKINS_CRED, verifyDeployments: true])

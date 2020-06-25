@@ -1,0 +1,118 @@
+https://www.scaleway.com/en/docs/how-to-configure-storage-with-glusterfs-on-ubuntu/
+https://www.itzgeek.com/how-tos/linux/centos-how-tos/install-and-configure-glusterfs-on-centos-7-rhel-7.html
+
+GlusterFS is an open-source, scalable network filesystem suitable for high data-intensive workloads. 
+Each storage server will be a mirror of the other storage server, 
+and files will be replicated automatically across both storage servers.
+
+Brick – is basic storage (directory) on a server in the trusted storage pool.
+Volume – is a logical collection of bricks.
+Server – is a machine where the actual file system is hosted in which the data will be stored.
+Client – is a machine which mounts the volume.
+Replicate – Making multiple copies of data to achieve high redundancy.
+glusterd – is a daemon that runs on all servers in the trusted storage pool.
+Cluster – is a group of linked computers, working together as a single computer.
+Distributed File System – A filesystem in which the data is spread across the multiple storage nodes and 
+allows the clients to access it over a network.
+
+Replicated Glusterfs Volume is like a RAID 1, and volume maintains exact copies of the data on all bricks. 
+You can decide the number of replicas while creating the volume, 
+so you would need to have atleast two bricks to create a volume with two replicas 
+or three bricks to create a volume of 3 replicas.
+====================================================================================================
+Configuring the Host File
+=========================
+node1.app1.project.com
+node2.app1.project.com
+======================
+Add GlusterFS Repository:
+=========================
+yum install -y centos-release-gluster
+=====================================
+Install GlusterFS:
+==================
+yum install -y glusterfs-server
+systemctl start glusterd
+systemctl enable glusterd
+==========================
+Configure Firewall:
+===================
+By default, glusterd will listen on tcp/24007 but opening that port is not enough on the gluster nodes. 
+Each time you will add a brick, it will open a new port (that you’ll be able to see with “gluster volumes status”)
+systemctl stop firewalld
+systemctl disable firewalld
+OR
+
+# Run below command on a node in which you want to accept all traffics comming from the source ip 
+firewall-cmd --zone=public --add-rich-rule='rule family="ipv4" source address="192.168.100.140" accept'
+firewall-cmd --reload
+
+firewall-cmd --zone=public --add-rich-rule='rule family="ipv4" source address="192.168.100.129" accept'
+firewall-cmd --reload
+=====================
+Add Storage:
+===========
+create a new pratition or disk or lv /dev/app1/test
+Format the created partition with the filesystem wee need:
+mkfs.ext4 /dev/app1/test	
+Mount the disk on a directory called /data/gluster:
+mkdir -p /data/gluster
+mount /dev/app1/test /data/gluster
+=================================
+creating a trusted storage pool
+===============================
+Before creating a volume, we need to create trusted storage pool by adding node2.app1.project.com.
+gluster peer probe node2.app1.project.com
+gluster peer status
+===================
+Setup GlusterFS Volume:
+=======================
+Create a volume called “gv0” in the mounted file system on both nodes.:
+gluster volume create gv0 replica 2 node1.app1.project.com:/data/gluster/gv0 node2.app1.project.com:/data/gluster/gv0 
+gluster volume start gv0
+gluster volume info gv0
+At this stage, we created the ‘gv0’ volume with the type ‘Replicate’ and 2 bricks on ‘node1’ and ‘node2’ servers. 
+All data will be distributed automatically to each replica server.
+
+To check the replication, mount the created GlusterFS volume on the same storage node.
+mount -t glusterfs node1.app1.project.com:/gv0 /var/www/html
+mount -t glusterfs node2.app1.project.com:/gv0 /var/www/html
+
+
+
+
+
+
+umount /data/gluster
+
+pcs resource create gluster_data ocf:heartbeat:Filesystem  device="/dev/app1/test" directory="/data/gluster" fstype="ext4"
+pcs resource create glusterd ocf:glusterfs:glusterd
+pcs resource clone glusterd
+pcs resource clone gluster_data
+
+
+ apt-get -o Dpkg::Options::="--force-overwrite" install  glusterfs-common
+   70  apt list --installed | grep gluster
+   71  apt-get -o Dpkg::Options::="--force-overwrite" install  glusterfs-server
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

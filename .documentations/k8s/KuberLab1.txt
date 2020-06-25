@@ -1,0 +1,99 @@
+Installing Docker,Kubernetes and enabling both of them on all nodes
+
+Docker
+
+sudo apt-get update
+sudo apt-get install \
+    apt-transport-https \
+    ca-certificates \
+    curl \
+    gnupg-agent \
+    software-properties-common
+
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+
+sudo add-apt-repository \
+   "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
+   $(lsb_release -cs) \
+   stable"
+
+sudo apt-get update
+sudo apt-get install docker-ce docker-ce-cli containerd.io -y
+sudo docker run hello-world
+
+sudo systemctl enable docker
+curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add
+sudo apt-add-repository "deb http://apt.kubernetes.io/ kubernetes-xenial main"
+
+
+sudo apt install kubeadm
+
+
+sudo swapoff -a
+
+export KUBECONFIG=/etc/kubernetes/kubelet.conf
+ON MASTER ONLY:
+sudo kubeadm init --pod-network-cidr=10.48.0.0/14 --apiserver-advertise-address=0.0.0.0 --apiserver-bind-port=8443 --service-cidr=10.2.0.0/20
+mkdir -p $HOME/.kube
+sudo  cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+ 
+chown $(id -u):$(id -g) $HOME/.kube/config
+
+kubeadm join 172.16.128.68:8443 --token n0ov3c.u07py6axozeu26tl \
+    --discovery-token-ca-cert-hash sha256:977f71b38378d0a138afc60d09a77dda18c2e2d44102cf93291541bbe704f52e
+
+echo "net.bridge.bridge-nf-call-iptables=1" | sudo tee -a /etc/sysctl.conf
+sudo  sysctl -p
+
+sudo scp $HOME/.kube/config marwan@172.16.128.73:/home/marwan/.kube/config
+sudo scp $HOME/.kube/config marwan@172.16.128.72:/home/marwan/.kube/config
+kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/v0.12.0/Documentation/kube-flannel.yml
+
+
+
+
+kubectl get nodes
+
+
+marwan@kubemaster:~$ kubectl get nodes
+NAME           STATUS     ROLES    AGE   VERSION
+kubemaster     NotReady   master   18m   v1.18.2
+kuberworker1   NotReady   <none>   5s    v1.18.2
+kuberworker2   NotReady   <none>   38s   v1.18.2
+
+
+marwan@kubemaster:~$ vim .kube/config
+marwan@kubemaster:~$ kubectl get nodes
+NAME           STATUS   ROLES    AGE   VERSION
+kubemaster     Ready    master   42m   v1.18.2
+kuberworker1   Ready    <none>   24m   v1.18.2
+kuberworker2   Ready    <none>   24m   v1.18.2
+
+marwan@kuberworker2:~$ kubectl version
+Client Version: version.Info{Major:"1", Minor:"18", GitVersion:"v1.18.2", GitCommit:"52c56ce7a8272c798dbc29846288d7cd9fbae032", GitTreeState:"clean", BuildDate:"2020-04-16T11:56:40Z", GoVersion:"go1.13.9", Compiler:"gc", Platform:"linux/amd64"}
+Server Version: version.Info{Major:"1", Minor:"18", GitVersion:"v1.18.2", GitCommit:"52c56ce7a8272c798dbc29846288d7cd9fbae032", GitTreeState:"clean", BuildDate:"2020-04-16T11:48:36Z", GoVersion:"go1.13.9", Compiler:"gc", Platform:"linux/amd64"}
+
+
+marwan@kubemaster:~$ kubectl get pods --all-namespaces
+NAMESPACE     NAME                                 READY   STATUS    RESTARTS   AGE
+kube-system   coredns-66bff467f8-4v7mp             1/1     Running   0          43m
+kube-system   coredns-66bff467f8-jj8tw             1/1     Running   0          43m
+kube-system   etcd-kubemaster                      1/1     Running   0          44m
+kube-system   kube-apiserver-kubemaster            1/1     Running   0          44m
+kube-system   kube-controller-manager-kubemaster   1/1     Running   1          44m
+kube-system   kube-flannel-ds-amd64-5kcnb          1/1     Running   0          25m
+kube-system   kube-flannel-ds-amd64-9g2pm          1/1     Running   0          25m
+kube-system   kube-flannel-ds-amd64-x8fkc          1/1     Running   0          25m
+kube-system   kube-proxy-pzwfh                     1/1     Running   0          26m
+kube-system   kube-proxy-xvqqs                     1/1     Running   0          43m
+kube-system   kube-proxy-zqsn2                     1/1     Running   0          26m
+kube-system   kube-scheduler-kubemaster            1/1     Running   0          44m
+
+
+
+
+
+kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/v0.12.0/Documentation/kube-flannel.yml
+
+
+

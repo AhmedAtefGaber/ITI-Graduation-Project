@@ -1,0 +1,70 @@
+https://cloud.google.com/solutions/continuous-delivery-jenkins-kubernetes-engine
+
+# Apply the cluster-admin role to the Jenkins service account:
+#   the Jenkins service account needs cluster-admin permissions so that it can create Kubernetes namespaces 
+#   and any other resources that the app requires.
+
+gcloud iam service-accounts create cd-jenkins \
+    --display-name "cd-jenkins"
+
+kubectl create clusterrolebinding cd-jenkins \
+    --clusterrole=cluster-admin --serviceaccount=default:cd-jenkins
+
+kubectl create clusterrolebinding jcd-jenkins \
+  --clusterrole=service-reader  \
+  --serviceaccount=default:cd-jenkins
+
+# Creating a repository to host the code
+mkdir  ITI-Graduation-Project
+git init
+ssh-keygen
+eval $(ssh-agent -s)
+ssh-add /home/ahmedatef844_218/.ssh/id_mrwan_rsa # add the key on github
+git remote add origin git@github.com:Marwan987/iti_gradpro.git
+
+# Creating a pipeline
+# Configure your credentials to allow Jenkins to access the code repository.
+# In the Jenkins user interface, Click Credentials in the left navigation.
+# Click the Jenkins link in the Credentials table.
+# Jenkins credential groups 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

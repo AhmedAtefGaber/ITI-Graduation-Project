@@ -1,0 +1,72 @@
+                                       High Avaialabilty Solution For Software Product Project (21/5 --> 31/5) - 10 days
+
+1- we will deploy our environment of AWS.
+2- 4 instances (each will have 1 App),active active, each 2 apps in a different Zone), (HA clustering).
+3- 2 LBs 
+4- 4 EBSs (1 for each Instance).
+5- 2 DBs (1 for each Instance).
+6- Providing Synchronization between 2 EBSs + Btween 2 DBs.
+7- Providing Backup Solution.
+8- Providing monitoring on our infrastucture using Nagois + Scripts.
+==============================================================================
+First 2 Instances Requirments:-
+
+54.175.105.3
+54.160.158.173
+
+1-Ubuntu (Version 20.04)
+2-WordPress--> PHP
+3-Apache
+4-MariaDB
+=============================================================================
+Second 2 Instances Requirments:-
+
+34.229.99.138
+34.207.149.212
+
+1-Centos (Version 7)
+2-WordPress--> PHP
+3-Nginx
+4-MySql
+==============================================================================
+Load Balancer Requirments:-
+
+1-Nginx or HA-Proxy (Load Balancing Cluster, Active|Passive).
+==============================================================================
+Apps Requriments:-
+
+1-WordPrss--> PHP
+===============================================================================
+Backup Requirments:-
+
+1- Full Backup every week.
+2- differential backup everyday.
+===============================================================================
+Nagios Requirments:-
+
+35.172.250.36
+
+1- Monitor System Up|Down. 
+2- CPU Utilization.
+3- Memeory Usage.
+4- Swap Usage.
+5- Disk Space.
+6- Http response code.
+7- DB number of connections.
+8- Clusters are Healhty or not.
+9- Event Handler and Actions needed for each issue using scripts.
+===============================================================================
+Ansible Requirments:-
+
+1- Create LBs and its requirments.
+2- Create Apps and its requirments.
+3- Installing Synchronization tool and its configuration using Ansible.
+===============================================================================
+Additional connections Requirments:-
+
+1- Secure Cluster connections (Connections allowed from specific ips+specific users, Changing Default Ports).
+2- Setup /etc/hosts  file to be able to connect using host name.
+3- Create self-signed certificate.
+4- providing SSL connections. 
+5- Rewrite Rules (Http--> Https).
+================================================================================

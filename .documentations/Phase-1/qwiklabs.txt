@@ -1,0 +1,9 @@
+https://www.coursera.org/learn/deploying-secure-kubernetes-containers-in-production/gradedLti/fUSTp/qwiklabs-securing-gke-with-cloud-iam-and-pod-security-policies
+
+
+https://accounts.google.com/ServiceLogin?continue=https%3A%2F%2Fconsole.cloud.google.com%2Fhome%2Fdashboard%3Fproject%3Dqwiklabs-gcp-01-e67a7a2385a1&service=accountsettings
+
+
+1:30: https://www.coursera.org/learn/configuration-management-cloud/gradedLti/0COEZ/qwiklabs-assessment-create-vm-template-and-automate-deployment
+
+

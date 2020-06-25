@@ -1,0 +1,65 @@
+rpm --import https://www.elrepo.org/RPM-GPG-KEY-elrepo.org
+rpm -Uvh http://www.elrepo.org/elrepo-release-7.0-3.el7.elrepo.noarch.rpm
+yum install -y kmod-drbd84 drbd84-utils
+semanage permissive -a drbd_t
+firewall-cmd --permanent --add-rich-rule='rule family="ipv4" source address="192.168.100.140" port port="7789" protocol="tcp" accept'
+firewall-cmd --reload
+
+firewall-cmd --permanent --add-rich-rule='rule family="ipv4" source address="192.168.100.129" port port="7789" protocol="tcp" accept'
+firewall-cmd --reload
+
+cat <<END >/etc/drbd.d/wordpress.res
+resource wordpress {
+protocol C;
+meta-disk internal;
+device /dev/drbd1;
+syncer {
+verify-alg sha1;
+}
+net {
+allow-two-primaries;
+}
+on node2.app1.project.com {
+disk /dev/app1/test;
+address 192.168.100.129:7789;
+}
+on node2.app1.project.com {
+disk /dev/app1/test;
+address 192.168.100.140:7789;
+}
+}
+END
+
+drbdadm create-md  wordpress
+modprobe drbd
+drbdadm up wordpress
+
+systemctl start drbd
+systemctl enable drbd
+drbdadm primary wordpress --force
+
+mkfs.xfs /dev/drbd1
+mount /dev/drbd1 /mnt/
+mkdir -p /mnt/testdrbd
+touch /mnt/testdrbd/test
+echo 'test' >  /mnt/testdrbd/test
+umount /dev/drbd1
+pcs cluster cib drbd_cfg
+pcs -f drbd_cfg resource create drbdtest ocf:linbit:drbd drbd_resource=wordpress op monitor interval=60s
+pcs -f drbd_cfg resource master drbdtestclone drbdtest master-max=1 master-node-max=1 clone-max=2 clone-node-max=1 notify=true
+pcs cluster cib-push drbd_cfg --config
+
+pcs cluster cib fs_cfg
+pcs -f fs_cfg resource create WebFS Filesystem device="/dev/drbd1" directory="/var/www/html" fstype="xfs"
+pcs cluster cib-push fs_cfg --config
+
+yum install -y gfs2-utils dlm
+pcs cluster cib dlm_cfg
+pcs -f dlm_cfg resource create dlm ocf:pacemaker:controld op monitor interval=60s
+pcs -f dlm_cfg resource clone dlm clone-max=2 clone-node-max=1
+pcs cluster cib-push dlm_cfg --config
+pcs resource update WebFS fstype=gfs2
+
+mkfs.gfs2 -p lock_dlm -j 2 -t iticluster:web /dev/drbd1
+mount -t gfs2 /dev/drbd1 /test
+

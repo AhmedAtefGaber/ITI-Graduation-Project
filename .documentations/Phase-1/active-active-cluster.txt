@@ -1,0 +1,26 @@
+hotnamectl set-hostname node1.app1.project.com
+ssh-keygen
+cp ~/.ssh/id_dsa.pub ~/.ssh/authorized_keys
+scp -r ~/.ssh node2.app1.project.com:
+yum install -y pacemaker pcs psmisc policycoreutils-python
+firewall-cmd --permanent --add-service=high-availability
+firewall-cmd --reload
+systemctl start pcsd.service
+systemctl enable pcsd.service
+passwd hacluster
+pcs cluster auth  node1.app1.project.com node2.app1.project.com
+pcs cluster setup --name iticluster node1.app1.project.com node2.app1.project.com
+pcs cluster start --all
+systemctl enable corosync.service
+systemctl enable pacemaker.service 
+corosync-cmapctl | grep members
+pcs property set stonith-enabled=false
+crm_verify -L
+pcs resource create ClusterIP ocf:heartbeat:IPaddr2 ip=192.168.100.200 cidr_netmask=32 op monitor interval=30s
+pcs cluster cib loadbalance_cfg
+pcs -f loadbalance_cfg resource clone ClusterIP clone-max=2 clone-node-max=2 globally-unique=true
+pcs -f loadbalance_cfg resource update ClusterIP clusterip_hash=sourceip
+pcs cluster cib-push loadbalance_cfg --config
+pcs status
+
+

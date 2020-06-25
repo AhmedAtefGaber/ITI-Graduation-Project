@@ -1,0 +1,87 @@
+https://devopscube.com/setup-jenkins-on-kubernetes-cluster/
+
+For setting up a Jenkins cluster on Kubernetes, we will do the following.
+
+    Create a Namespace
+    Create a deployment yaml and deploy it.
+    Create a service yaml and deploy it.
+    Access the Jenkins application on a Node Port.
+
+
+# Create a Namespace for Jenkins. So that we will have an isolation for the CI/CD environment
+kubectl create ns jenkins
+
+# Create a Deployment file named jenkins-deployment.yaml the latest Jenkins Docker Image
+mkdir jenkins-install ; cd jenkins-install
+vim jenkins-deployment.yaml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jenkins-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jenkins
+  template:
+    metadata:
+      labels:
+        app: jenkins
+    spec:
+      containers:
+      - name: jenkins
+        image: jenkins/jenkins
+        ports:
+        - containerPort: 8080
+
+
+# Create the jenkins deployment in jenkins namespace using the following command.
+kubectl create -f jenkins-deployment.yaml --namespace=jenkins
+
+# For accessing the Jenkins container from outside world, we should create a service and map it to the deployment.
+# Create a jenkins-service.yaml file with the following contents.
+vim jenkins-service.yaml
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: jenkins
+spec:
+  type: NodePort
+  ports:
+    - port: 8080
+      targetPort: 8080
+      nodePort: 30000
+  selector:
+    app: jenkins
+
+
+kubectl create -f jenkins-service.yaml --namespace=jenkins
+
+# we can browse to any one of the Node IP on port 30000, you will be able to access the Jenkins dashboard
+http://<node-ip>:30000
+
+# Jenkins will ask for initial Admin password. 
+# You can get that from the pod logs either from kubernetes dashboard or  CLI.
+
+kubectl get pods --namespace=jenkins
+kubectl logs jenkins-deployment-2539456353-j00w5 --namespace=jenkins
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

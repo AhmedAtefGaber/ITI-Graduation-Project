@@ -1,0 +1,31 @@
+# Adding a new node 
+# Add the new server inventory/iti-cluster/hosts.yml file In “[all]” section and In [kube-node] section
+vim inventory/iti-cluster/hosts.yml
+
+# add user k8s to the new server then Enable passwordless login to the new server  
+useradd -md /home/k8s -s /bin/bash k8s
+passwd k8s
+sudo echo 'k8s        ALL=(ALL)       NOPASSWD: ALL' >> /etc/sudoers
+mkdir .ssh
+vi .ssh/authorized_keys
+
+ansible-playbook -i inventory/iti-cluster/hosts.yml --become --become-user=root scale.yml
+
+
+- name: Stop if ip var does not match local ips
+  assert:
+    that: ip in ansible_all_ipv4_addresses
+  when:
+    - not ignore_assert_errors
+    - ip is defined
+
+https://github.com/kubernetes-sigs/kubespray/issues/5141
+
+
+
+
+
+
+
+
+

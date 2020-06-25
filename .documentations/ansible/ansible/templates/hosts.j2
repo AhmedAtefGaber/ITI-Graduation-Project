@@ -1,0 +1,3 @@
+{% for item in groups['all'] %}
+{{ hostvars[item]['ansible_default_ipv4']['address']}} {{ hostvars[item]['host_name'] }}
+{% endfor %}

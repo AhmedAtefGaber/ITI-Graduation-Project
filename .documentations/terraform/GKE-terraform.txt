@@ -1,0 +1,146 @@
+https://www.padok.fr/en/blog/kubernetes-google-cloud-terraform-cluster
+
+# SDK provides the tools used to interact with the Google Cloud Platform REST API, 
+# they allow us to create and manage GCP resources from a command-line interface. 
+# Run the following commands to install and initialize it
+echo "deb https://packages.cloud.google.com/apt cloud-sdk main" | sudo tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
+curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
+sudo apt-get update && sudo apt-get install google-cloud-sdk kubectl
+gcloud init
+# will diplay a link to get the verification key to login
+
+# enable the Google Cloud APIs we will be using:
+gcloud services enable compute.googleapis.com
+gcloud services enable servicenetworking.googleapis.com
+gcloud services enable cloudresourcemanager.googleapis.com
+gcloud services enable container.googleapis.com
+
+# create a service account
+gcloud iam service-accounts create terraform
+
+# grant the necessary roles for our service account to create a GKE cluster and the associated resources
+gcloud projects add-iam-policy-binding iti-project-281015 --member serviceAccount:terraform@iti-project-281015.iam.gserviceaccount.com --role roles/container.admin
+gcloud projects add-iam-policy-binding iti-project-281015 --member serviceAccount:terraform@iti-project-281015.iam.gserviceaccount.com --role roles/compute.admin
+gcloud projects add-iam-policy-binding iti-project-281015 --member serviceAccount:terraform@iti-project-281015.iam.gserviceaccount.com --role roles/iam.serviceAccountUser
+gcloud projects add-iam-policy-binding iti-project-281015 --member serviceAccount:terraform@iti-project-281015.iam.gserviceaccount.com --role roles/resourcemanager.projectIamAdmin
+
+# To work on our infrastructure with a team, 
+# we can use source control to share our infrastructure code.
+# By default, Terraform stores the state of our infrastructure in a local state file.
+# We could commit it with our infrastructure code, 
+# but the best practice for sharing a Terraform state when working with teams is to store it in remote storage. 
+
+# configure Terraform to store the state in a Google Cloud Storage Bucket.
+gsutil mb -p iti-project-281015 -c regional -l europe-west4 gs://terraform-state-my-first-gke-iti-project-281015/
+
+#  activate object versioning to allow for state recovery in the case of accidental deletions and human error
+gsutil versioning set on gs://terraform-state-my-first-gke-iti-project-281015/
+
+# grant read/write permissions on this bucket to our service account
+gsutil iam ch serviceAccount:terraform@iti-project-281015.iam.gserviceaccount.com:legacyBucketWriter gs://terraform-state-my-first-gke-iti-project-281015/
+
+# configure Terraform to use this bucket to store the state. 
+# Create the following terraform.tf file in the same directory where you downloaded the service account key file
+
+mkdir gcp-gke
+cp cred.json gcp-gke/
+
+
+terraform {
+  backend "gcs" {
+    credentials = "./cred.json"
+    bucket      = "terraform-state-my-first-gke-iti-project-281015"
+    prefix      = "terraform/state"
+  }
+}
+
+terraform init
+ 
+vim providers.tf
+
+provider "google" {
+  version     = "2.7.0"
+  credentials = "${file(var.credentials)}"
+  project     = var.project_id
+  region      = var.region
+}
+
+provider "google-beta" {
+  version     = "2.7.0"
+  credentials = "${file(var.credentials)}"
+  project     = var.project_id
+  region      = var.region
+}
+
+
+#  create the following main.tf file where we reference the module mentioned earlier
+vim main.tf
+
+https://gist.githubusercontent.com/HadrienPatte/61e942fe56ee165c86dd86df118b9d6b/raw/2324769f934f5ad37fe099931c907a723b8050b6/main.tf
+
+
+# create a variables.tf file to describe the variables referenced in the previous file and their type
+
+vim variables.tf
+https://gist.githubusercontent.com/HadrienPatte/6218d8fc8aad263eac11cf8f4e479e33/raw/4fed0f8d5c5ae9ce918adaafeac85567fb667197/variables.tf
+
+# create the following variables.auto.tfvars file to specify values for the variables defined above:
+
+vim variables.auto.tfvars
+
+credentials        = "./cred.json"
+project_id         = "iti-project-281015"
+region             = "europe-west4"
+zones              = ["europe-west4-a", "europe-west4-b"]
+name               = "gke-cluster"
+machine_type       = "n1-standard-1"
+min_count          = 1
+max_count          = 3
+disk_size_gb       = 10
+service_account    = "terraform@iti-project-281015.iam.gserviceaccount.com"
+initial_node_count = 3
+
+
+# run terraform init again to install the required plugins. If you are curious
+terraform init
+
+# get a complete list of the different resources Terraform will create to achieve the state described 
+# in the configuration files you just wrote, run
+terraform plan
+
+# create the GKE cluster, apply the plan:
+terraform apply
+
+# When Terraform is done, we can check the status of the cluster and configure the kubectl command line tool to connect to it with
+gcloud container clusters list
+gcloud container clusters get-credentials gke-cluster --zone europe-west4
+
+# test the deployed GKE cluster
+cd test-gke/
+kubectl apply -f nginx-deployment.yaml,nginx-svc.yaml
+kubectl get all
+lynx http://${ip_of_LB}
+
+# cleanup
+cd ..
+terraform destroy
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
