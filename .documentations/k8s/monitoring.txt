@@ -1,0 +1,6 @@
+https://devopscube.com/setup-prometheus-monitoring-on-kubernetes/
+https://devopscube.com/alert-manager-kubernetes-guide/
+https://devopscube.com/alert-manager-kubernetes-guide/
+https://devopscube.com/setup-kube-state-metrics/
+https://raw.githubusercontent.com/Ahmed-Gebaly/ITI-Graduation-Project/master/kubernetes-monitoring/kubernetes-prometheus/3.config-map.yaml
+https://github.com/Ahmed-Gebaly/ITI-Graduation-Project
