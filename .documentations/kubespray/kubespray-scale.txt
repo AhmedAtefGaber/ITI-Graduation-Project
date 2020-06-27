@@ -9,17 +9,17 @@ sudo echo 'k8s        ALL=(ALL)       NOPASSWD: ALL' >> /etc/sudoers
 mkdir .ssh
 vi .ssh/authorized_keys
 
-ansible-playbook -i inventory/iti-cluster/hosts.yml --become --become-user=root scale.yml
+# to add worker nodes to the cluster 
+ansible-playbook -i inventory/iti-cluster/hosts.yml scale.yml -b -v \
+  --private-key=~/.ssh/id_rsa
 
+# to add master node, edit inventory/iti-cluster/hosts.yml then run  
+ansible-playbook -i inventory/iti-cluster/hosts.yml cluster.yml -b -v   --private-key=~/.ssh/id_rsa
 
-- name: Stop if ip var does not match local ips
-  assert:
-    that: ip in ansible_all_ipv4_addresses
-  when:
-    - not ignore_assert_errors
-    - ip is defined
-
-https://github.com/kubernetes-sigs/kubespray/issues/5141
+# to remove node2 "node2 can be master or worker" 
+ansible-playbook -i inventory/iti-cluster/hosts.yml remove-node.yml -b -v \
+--private-key=~/.ssh/id_rsa \
+--extra-vars "node=node2"
 
 
 

@@ -80,17 +80,17 @@ kubectl autoscale deployment wordpress2 --cpu-percent=20 --min=1 --max=10
 ab -n 1000 -c 100 http://
 while true; do wget -q -O- http:// ; done
 
-# create db,user,grant priveleges in mysql statefulset  
-kubectl run mysql-client --image=mysql:5.7 -i --rm --restart=Never --\
-  mysql -h mysql-0.mysql <<EOF
-CREATE DATABASE wpdb;
-CREATE DATABASE wpdb2;
-CREATE USER 'wpuser'@'%' IDENTIFIED BY '1234';
-GRANT ALL PRIVILEGES ON wpdb.* TO 'wpuser'@'%';
-CREATE USER 'wpuser2'@'%' IDENTIFIED BY '1234';
-GRANT ALL PRIVILEGES ON wpdb2.* TO 'wpuser2'@'%';
-FLUSH PRIVILEGES;
-EOF
+< /dev/urandom tr -dc [:alnum:] | head -c 32 ; echo ""
+
+
+161.35.203.241
+64.227.112.75
+134.209.234.100
+64.225.103.233
+64.227.112.88
+64.225.111.66
+64.225.103.56
+
 
 
 
