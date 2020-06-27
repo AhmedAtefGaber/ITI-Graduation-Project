@@ -4,7 +4,7 @@ ssh -i "D:\ITI_SYSTEM ADMIN\Project\keys\atef.ppk" atef@134.209.234.100
 ssh -i "D:\ITI_SYSTEM ADMIN\Project\keys\atef.ppk" atef@64.225.103.233
 ssh -i "D:\ITI_SYSTEM ADMIN\Project\keys\atef.ppk" atef@64.227.112.88
 ssh -i "D:\ITI_SYSTEM ADMIN\Project\keys\atef.ppk" atef@64.225.111.66
-ssh -i "D:\ITI_SYSTEM ADMIN\Project\keys\atef.ppk" atef@64.225.103.56
+ssh -i "D:\ITI_SYSTEM ADMIN\Project\keys\k8s" k8s@64.225.103.56
 
 vi /etc/hosts
 161.35.203.241  node1
