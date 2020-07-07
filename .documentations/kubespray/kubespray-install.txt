@@ -15,7 +15,7 @@ vi /etc/hosts
 64.225.111.66   node6
 64.225.103.56   master
 
-https://www.youtube.com/watch?v=IluhOk86prA
+https://www.youtube.com/watch?v=CJ5G4GpqDy0
 https://dzone.com/articles/kubespray-10-simple-steps-for-installing-a-product
 
 # on the jumpbox
